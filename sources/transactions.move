@@ -6,7 +6,7 @@ use sui::bcs;
 const EInvalidTxid: u64 = 0;
 
 const TXID_LENGTH: u64 = 32;
-const PEGOUT_POSITION: u64 = 4; // The PegOut is the first input
+const PEGOUT_POSITION: u64 = 4; // PegOut is the first input
 const INPUT_LENGTH: u64 = 36;
 
 public struct Tx has copy, drop, store {
