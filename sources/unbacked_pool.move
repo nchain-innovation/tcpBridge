@@ -1,56 +1,86 @@
 module tcpbridge::unbacked_pool;
 
-use sui::table::Table;
-use tcpbridge::admin::BridgeAdmin;
 use sui::clock::Clock;
-use tcpbridge::txid::TxID;
+use sui::table::{Table, new as new_table};
+use tcpbridge::admin::BridgeAdmin;
+use tcpbridge::transactions::OutPoint;
 
 const PEGIN_TIME: u64 = 10 * 60 * 1000; // 10 minutes
 
+/// Error codes
+const EInvalidGenesis: u64 = 0;
+
+public struct PegOutEntry has drop, store {
+    pegout: OutPoint,
+    time: u64,
+}
+
 public struct UnbackedPool has key, store {
     id: UID,
-    pegout: Table<TxID, TxID>, // Genesis -> Peg-out
-    time: Table<TxID, u64> // Genesis -> Time
+    entry: Table<OutPoint, PegOutEntry>, // Genesis -> (PegOut, Time)
 }
 
-/// Add a new <Genesis, Peg-out> couple to the unbacked pool
-public fun add(_: &BridgeAdmin, unbacked_pool: &mut UnbackedPool, genesis: TxID, pegout: TxID, clock: &Clock) {
-    unbacked_pool.pegout.add(genesis, pegout);
-    unbacked_pool.time.add(genesis, clock.timestamp_ms());
+public(package) fun new(ctx: &mut TxContext): UnbackedPool {
+    UnbackedPool { id: object::new(ctx), entry: new_table(ctx) }
 }
 
-/// Remove entries <Genesis, Peg-out> for which the peg-in time has elapsed
-public fun drop_elapsed(_: &BridgeAdmin, unbacked_pool: &mut UnbackedPool, genesis: TxID, clock: &Clock) {
-    let genesis_clock = unbacked_pool.time[genesis];
+/// Add a new <Genesis: (PegOut, Time)> couple to the unbacked pool
+public(package) fun add(
+    _: &BridgeAdmin,
+    unbacked_pool: &mut UnbackedPool,
+    genesis: OutPoint,
+    pegout: OutPoint,
+    clock: &Clock,
+) {
+    unbacked_pool.entry.add(genesis, PegOutEntry { pegout, time: clock.timestamp_ms() });
+}
+
+/// Remove entries <Genesis: (PegOut, Time)> for which the PegIn time has elapsed
+public(package) fun drop_elapsed(
+    _: &BridgeAdmin,
+    unbacked_pool: &mut UnbackedPool,
+    genesis: OutPoint,
+    clock: &Clock,
+) {
+    // No check for `genesis` in `unbacked_pool.entry`, the BridgeAdming is supposed to check this
+    let genesis_clock = unbacked_pool.entry[genesis].time;
     if (clock.timestamp_ms() - genesis_clock > PEGIN_TIME) {
-        unbacked_pool.pegout.remove(genesis);
-        unbacked_pool.time.remove(genesis);
+        unbacked_pool.entry.remove(genesis);
     };
 }
 
-/// Remove entries <Genesis, Peg-out>
-public(package) fun remove(unbacked_pool: &mut UnbackedPool, genesis: TxID) {
-    unbacked_pool.pegout.remove(genesis);
-    unbacked_pool.time.remove(genesis);
+/// Remove entries <Genesis: (PegOut, Time)>
+public(package) fun remove(unbacked_pool: &mut UnbackedPool, genesis: OutPoint) {
+    unbacked_pool.entry.remove(genesis);
 }
 
-/// Query unbacked pool for <Genesis, Peg-out>
-public fun is_valid_couple(unbacked_pool: &UnbackedPool, genesis: TxID, pegout: TxID): bool {
-    // Validate pegout table
-    let mut is_pegout_valid = unbacked_pool.pegout.contains(genesis);
-    is_pegout_valid = is_pegout_valid && (unbacked_pool.pegout[genesis] == pegout);
-    // Validate time table
-    let is_time_valid = unbacked_pool.time.contains(genesis);
-
-    is_pegout_valid && is_time_valid
+/// Query the validity of <Genesis: (PegOut, _)>
+public(package) fun is_valid_couple(
+    unbacked_pool: &UnbackedPool,
+    genesis: OutPoint,
+    pegout: OutPoint,
+): bool {
+    // Validate `genesis` as a key
+    if (unbacked_pool.entry.contains(genesis)) {
+        unbacked_pool.entry[genesis].pegout == pegout
+    } else {
+        false
+    }
 }
 
-/// Validate genesis
-public fun is_valid_genesis(unbacked_pool: &UnbackedPool, genesis: TxID, clock: &Clock): bool {
-    unbacked_pool.pegout.contains(genesis) && unbacked_pool.time.contains(genesis) && clock.timestamp_ms() - unbacked_pool.time[genesis] <= PEGIN_TIME
+/// Query whether <Genesis: (_, _)> is elapsed
+public(package) fun is_genesis_elapsed(
+    unbacked_pool: &UnbackedPool,
+    genesis: OutPoint,
+    clock: &Clock,
+): bool {
+    // Validate `genesis` as a key
+    assert!(unbacked_pool.entry.contains(genesis), EInvalidGenesis);
+    // Is PegIn time for `genesis` elapsed?
+    clock.timestamp_ms() - unbacked_pool.entry[genesis].time > PEGIN_TIME
 }
 
-/// Retrive pegout
-public(package) fun get_pegout(unbacked_pool: &UnbackedPool, genesis: TxID): TxID {
-    unbacked_pool.pegout[genesis]
+/// Retrive PegOut for <Genesis: (PegOut, _)>
+public(package) fun get_pegout(unbacked_pool: &UnbackedPool, genesis: OutPoint): OutPoint {
+    unbacked_pool.entry[genesis].pegout
 }
