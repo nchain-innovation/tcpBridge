@@ -1,0 +1,10 @@
+[package]
+name = "tcpbridge"
+edition = "2024.beta"
+
+[dependencies]
+
+blockchain_oracle = { local = "../oracle" }
+
+[addresses]
+tcpbridge = "0x0"

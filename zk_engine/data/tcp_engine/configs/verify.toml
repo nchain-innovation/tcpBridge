@@ -1,0 +1,9 @@
+proof_path = "proof_31df2ae9d17e99a484c60e75ec76b5a9983f21e8cf9061df8bfa2903dae87f72"
+
+[chain_parameters]
+input_index = 1
+output_index = 0
+
+[public_inputs]
+outpoint_txid = "5a443c717b896db73c2a630b3e3fb1e93005b6cdef7152abe613f742d8dcc6c1"
+genesis_txid = "31df2ae9d17e99a484c60e75ec76b5a9983f21e8cf9061df8bfa2903dae87f72"

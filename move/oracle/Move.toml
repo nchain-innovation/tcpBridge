@@ -1,0 +1,6 @@
+[package]
+name = "blockchain_oracle"
+edition = "2024.beta"
+
+[addresses]
+blockchain_oracle = "0x0"

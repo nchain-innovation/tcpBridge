@@ -1,0 +1,42 @@
+{
+    "alice": {
+        "bsv_wallet": "",
+        "sui_address": "",
+        "genesis_utxos": [],
+        "token_utxos": [],
+        "pegout_utxos": [],
+        "zk_proof_paths": [],
+        "funding_utxos": [],
+        "burnt_tokens": []
+    },
+    "bob": {
+        "bsv_wallet": "",
+        "sui_address": "",
+        "genesis_utxos": [],
+        "token_utxos": [],
+        "pegout_utxos": [],
+        "zk_proof_paths": [],
+        "funding_utxos": [],
+        "burnt_tokens": []
+    },
+    "charlie": {
+        "bsv_wallet": "",
+        "sui_address": "",
+        "genesis_utxos": [],
+        "token_utxos": [],
+        "pegout_utxos": [],
+        "zk_proof_paths": [],
+        "funding_utxos": [],
+        "burnt_tokens": []
+    },
+    "issuer": {
+        "bsv_wallet": "",
+        "sui_address": "",
+        "genesis_utxos": [],
+        "token_utxos": [],
+        "pegout_utxos": [],
+        "zk_proof_paths": [],
+        "funding_utxos": [],
+        "burnt_tokens": []
+    }
+}
