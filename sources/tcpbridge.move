@@ -3,7 +3,7 @@ module tcpbridge::tcpbridge;
 use blockchain_oracle::blockchain_oracle::HeaderChain;
 use blockchain_oracle::spv::new as new_merkle_proof;
 use sui::clock::Clock;
-use sui::coin::{Coin, into_balance, from_balance};
+use sui::coin::{Coin, from_balance};
 use sui::sui::SUI;
 use tcpbridge::admin::BridgeAdmin;
 use tcpbridge::backed_pool::{
@@ -46,7 +46,7 @@ fun init(ctx: &mut TxContext) {
     transfer::share_object(bridge);
 }
 
-/// Unbacked pool methods
+/// === Unbacked pool methods ====
 
 /// Add a new <Genesis: (PegOut, Time)> couple to the unbacked pool of the bridge
 public entry fun add<T>(
@@ -57,7 +57,6 @@ public entry fun add<T>(
     pegout_txid: vector<u8>,
     pegout_index: u32,
     clock: &Clock,
-    _ctx: &mut TxContext,
 ) {
     add_to_unbacked_pool(
         admin_cap,
@@ -75,7 +74,6 @@ public entry fun drop_elapsed<T>(
     genesis_txid: vector<u8>,
     genesis_index: u32,
     clock: &Clock,
-    _ctx: &mut TxContext,
 ) {
     drop_elapsed_from_unbacked_pool(
         adming_cap,
@@ -93,7 +91,6 @@ public entry fun is_valid<T>(
     pegout_txid: vector<u8>,
     pegout_index: u32,
     clock: &Clock,
-    _ctx: &mut TxContext,
 ): bool {
     let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
     let pegout = new_outpoint(new_txid(pegout_txid), pegout_index);
@@ -118,7 +115,7 @@ public entry fun get_pegout<T>(
     serialise(get_pegout_unbacked_pool(&bridge.unbacked_pool, genesis))
 }
 
-/// Backed pool methods
+/// ==== Backed pool methods ====
 
 /// PegIn against a given `genesis` in the `unbacked_pool`
 public entry fun pegin<T>(
@@ -127,14 +124,13 @@ public entry fun pegin<T>(
     genesis_index: u32,
     coin: Coin<T>,
     clock: &Clock,
-    _ctx: &mut TxContext,
 ) {
     let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
     pegin_backed_pool(
         &mut bridge.backed_pool,
         &mut bridge.unbacked_pool,
         genesis,
-        into_balance(coin),
+        coin,
         clock,
     );
 }
@@ -149,7 +145,7 @@ public entry fun pegout<T>(
     merkle_proof_positions: vector<bool>,
     merkle_proof_hashes: vector<vector<u8>>,
     block_count: u64,
-    ctx: &mut TxContext, // THIS IS MEANT TO BE USED TO RETURN THE TOKENS TO THE SENDER
+    ctx: &mut TxContext,
 ) {
     // Validate HeaderChain
     let header_chain_address = object::id(header_chain);
@@ -176,4 +172,22 @@ public entry fun get_coin_value<T>(
 ): u64 {
     let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
     get_coin_value_backed_pool(&bridge.backed_pool, genesis)
+}
+
+/// ==== Test-code ====
+
+#[test_only]
+public(package) fun new_bridge_for_test(
+    header_chain_address: address,
+    ctx: &mut TxContext,
+): Bridge<SUI> {
+    let unbacked_pool = new_unbacked_pool(ctx);
+    let backed_pool = new_backed_pool<SUI>(ctx);
+    let bridge = Bridge {
+        id: object::new(ctx),
+        header_chain_id: object::id_from_address(header_chain_address),
+        unbacked_pool,
+        backed_pool,
+    };
+    bridge
 }

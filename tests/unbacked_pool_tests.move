@@ -2,6 +2,19 @@
 module tcpbridge::unbacked_pool_tests;
 
 use std::unit_test::assert_eq;
+use sui::clock::{Clock, create_for_testing, share_for_testing, increment_for_testing};
+use sui::test_scenario;
+use tcpbridge::admin::{BridgeAdmin, new_admin_cap};
+use tcpbridge::transactions::{new_txid, new_outpoint};
+use tcpbridge::unbacked_pool::{
+    UnbackedPool,
+    new,
+    add,
+    is_valid_couple,
+    get_pegout,
+    is_genesis_elapsed,
+    drop_elapsed
+};
 
 const DUMMY_ADDRESS: address = @0xCAFE;
 const DUMMY_TXID: vector<u8> = vector[
@@ -20,20 +33,6 @@ const DUMMY_PEGOUT_2: vector<u8> = vector[
 
 #[test]
 fun test_unbacked_pool() {
-    use sui::test_scenario;
-    use tcpbridge::admin::{BridgeAdmin, new_admin_cap};
-    use tcpbridge::transactions::{new_txid, new_outpoint};
-    use tcpbridge::unbacked_pool::{
-        UnbackedPool,
-        new,
-        add,
-        is_valid_couple,
-        get_pegout,
-        is_genesis_elapsed,
-        drop_elapsed,
-    };
-    use sui::clock::{Clock, create_for_testing, share_for_testing, increment_for_testing};
-
     // Create AdminCap, UnbackedPool, Clock
     let mut scenario = test_scenario::begin(DUMMY_ADDRESS);
     {

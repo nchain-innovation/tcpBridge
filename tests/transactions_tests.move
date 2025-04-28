@@ -3,6 +3,7 @@ module tcpbridge::transactions_tests;
 
 use std::macros::range_do;
 use std::unit_test::assert_eq;
+use sui::hex::decode;
 
 const DUMMY_TXID: vector<u8> = vector[
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -15,44 +16,9 @@ const DUMMY_PEGOUT: vector<u8> = vector[
 #[test]
 fun test_outpoint_serialisation() {
     use tcpbridge::transactions::{new_txid, new_outpoint, serialise};
-    let target_serialisation = vector[
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        4,
-        0,
-        0,
-        0,
-    ];
+    let target_serialisation = decode(
+        b"000000000000000000000000000000000000000000000000000000000000000004000000",
+    );
 
     let outpoint = new_outpoint(new_txid(DUMMY_TXID), 4);
     assert_eq!(serialise(outpoint), target_serialisation);
