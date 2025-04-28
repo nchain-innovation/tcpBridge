@@ -119,7 +119,7 @@ public fun pegout_for_test<T>(
     pegout_delay: u64,
 ): Balance<T> {
     // Validate pegout time
-    assert!(get_chain_length(header_chain) - block_count >= pegout_delay, EInvalidPegoutTime);
+    assert!(get_chain_length(header_chain) - block_count - 1 >= pegout_delay, EInvalidPegoutTime);
     // Validate spv
     assert!(
         verify_spv(tx_to_bytes(burning_tx), merkle_proof, block_count, header_chain),
