@@ -42,7 +42,7 @@ public(package) fun drop_elapsed(
     genesis: OutPoint,
     clock: &Clock,
 ) {
-    // No check for `genesis` in `unbacked_pool.entry`, the BridgeAdming is supposed to check this
+    // No check for `genesis` in `unbacked_pool.entry`, the BridgeAdmin is supposed to check this
     let genesis_clock = unbacked_pool.entry[genesis].time;
     if (clock.timestamp_ms() - genesis_clock > PEGIN_TIME) {
         unbacked_pool.entry.remove(genesis);
