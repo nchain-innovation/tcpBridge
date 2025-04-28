@@ -3,7 +3,7 @@ module tcpbridge::unbacked_pool_tests;
 
 use std::unit_test::assert_eq;
 use sui::clock::{Clock, create_for_testing, share_for_testing, increment_for_testing};
-use sui::test_scenario;
+use sui::test_scenario::{Self, Scenario};
 use tcpbridge::admin::{BridgeAdmin, new_admin_cap};
 use tcpbridge::transactions::{new_txid, new_outpoint, OutPoint};
 use tcpbridge::unbacked_pool::{
@@ -13,9 +13,8 @@ use tcpbridge::unbacked_pool::{
     get_pegout,
     is_genesis_elapsed,
     drop_elapsed,
-    new as new_unbacked_pool,
+    new as new_unbacked_pool
 };
-use sui::test_scenario::Scenario;
 
 const DUMMY_ADDRESS: address = @0xCAFE;
 const DUMMY_TXID: vector<u8> = vector[
@@ -49,11 +48,7 @@ fun retrive_objects(scenario: &Scenario): (Clock, BridgeAdmin, UnbackedPool) {
 }
 
 /// Return objects to inventory
-fun return_to_inventory(
-    clock: Clock,
-    admin_cap: BridgeAdmin,
-    unbacked_pool: UnbackedPool,
-) {
+fun return_to_inventory(clock: Clock, admin_cap: BridgeAdmin, unbacked_pool: UnbackedPool) {
     test_scenario::return_shared<Clock>(clock);
     test_scenario::return_shared<UnbackedPool>(unbacked_pool);
     test_scenario::return_to_address<BridgeAdmin>(DUMMY_ADDRESS, admin_cap);
@@ -118,13 +113,23 @@ fun test_drop_elapsed() {
         increment_for_testing(&mut clock, 10 * 60 * 1000 + 1);
 
         // Check that genesis is elapsed
-        assert_eq!(is_genesis_elapsed(&unbacked_pool, new_outpoint(new_txid(DUMMY_TXID), 0), &clock), true);
+        assert_eq!(
+            is_genesis_elapsed(&unbacked_pool, new_outpoint(new_txid(DUMMY_TXID), 0), &clock),
+            true,
+        );
 
         // Remove elapsed
         drop_elapsed(&admin_cap, &mut unbacked_pool, new_outpoint(new_txid(DUMMY_TXID), 0), &clock);
 
         // Check that elapsed genesis is removed
-        assert_eq!(is_valid_couple(&unbacked_pool, new_outpoint(new_txid(DUMMY_TXID), 0), new_outpoint(new_txid(DUMMY_PEGOUT), 0)), false);
+        assert_eq!(
+            is_valid_couple(
+                &unbacked_pool,
+                new_outpoint(new_txid(DUMMY_TXID), 0),
+                new_outpoint(new_txid(DUMMY_PEGOUT), 0),
+            ),
+            false,
+        );
 
         return_to_inventory(clock, admin_cap, unbacked_pool);
     };
@@ -160,7 +165,7 @@ fun test_drop_elapsed_invalid() {
     scenario.next_tx(DUMMY_ADDRESS);
     {
         let (clock, admin_cap, mut unbacked_pool) = retrive_objects(&scenario);
-        
+
         drop_elapsed(&admin_cap, &mut unbacked_pool, genesis, &clock);
 
         // Check that elapsed genesis is not removed
@@ -182,7 +187,6 @@ fun test_is_genesis_elapsed_error_one() {
 fun test_is_genesis_elapsed_error_two() {
     test_is_genesis_elapsed_error(new_outpoint(new_txid(DUMMY_TXID), 1)) // Wrong index
 }
-
 
 #[test]
 fun test_get_pegout() {
@@ -207,7 +211,7 @@ fun test_get_pegout() {
 
         // Retrive pegout for DUMMY_TXID
         assert_eq!(get_pegout(&unbacked_pool, genesis), pegout);
-        
+
         return_to_inventory(clock, admin_cap, unbacked_pool);
     };
 

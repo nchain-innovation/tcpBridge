@@ -24,7 +24,7 @@ use tcpbridge::unbacked_pool::{
     UnbackedPool,
     new as new_unbacked_pool,
     add,
-    is_valid_couple as is_valid_couple_in_unbacked,
+    is_valid_couple as is_valid_couple_in_unbacked
 };
 
 const DUMMY_ADDRESS: address = @0xCAFE;
@@ -305,23 +305,23 @@ fun test_failed_pegout_spv() {
     let burning_tx = new_tx(decode(TX_SERIALISATION));
     let positions = vector[true, false, false, false, false, false, false, false, false, false];
     let hashes = vector[
-            decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
-            decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-            decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-            decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-            decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-            decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-            decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-            decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-            decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"), // This one and the one below are swapped
-            decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
-        ];
+        decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
+        decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
+        decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
+        decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
+        decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
+        decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
+        decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
+        decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
+        decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"), // This one and the one below are swapped
+        decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
+    ];
     failed_pegout(
         genesis,
         burning_tx,
         new_merkle_proof(positions, hashes),
         0,
-        0
+        0,
     );
 }
 
@@ -347,7 +347,7 @@ fun test_failed_pegout_min_delay() {
         burning_tx,
         new_merkle_proof(positions, hashes),
         0,
-        1
+        1,
     );
 }
 
@@ -381,7 +381,11 @@ fun test_failed_pegout_wrong_genesis() {
 fun test_failed_pegout_wrong_pegout_input() {
     let genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
     // Coinbase Tx
-    let burning_tx = new_tx(decode(b"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff1a03e5a50d2f7461616c2e636f6d2fc64d1336b0bec2aea10a0600ffffffff018729a112000000001976a914522cf9e7626d9bd8729e5a1398ece40dad1b6a2f88ac00000000"));
+    let burning_tx = new_tx(
+        decode(
+            b"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff1a03e5a50d2f7461616c2e636f6d2fc64d1336b0bec2aea10a0600ffffffff018729a112000000001976a914522cf9e7626d9bd8729e5a1398ece40dad1b6a2f88ac00000000",
+        ),
+    );
     let positions = vector[false, false, false, false, false, false, false, false, false, false];
     let hashes = vector[
         decode(b"963369cc95862f5f1552a8c6d51f880f7d2aa13ebc0422a2ef4b9a5cc6980358"),
