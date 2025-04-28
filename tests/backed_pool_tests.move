@@ -4,7 +4,6 @@ module tcpbridge::backed_pool_tests;
 use blockchain_oracle::blockchain_oracle::{new_header_chain, HeaderChain};
 use blockchain_oracle::spv::new as new_merkle_proof;
 use std::unit_test::assert_eq;
-use sui::balance;
 use sui::clock::{Clock, create_for_testing, share_for_testing, increment_for_testing};
 use sui::coin::{Coin, mint_for_testing, from_balance};
 use sui::hex::decode;
@@ -25,9 +24,6 @@ use tcpbridge::unbacked_pool::{
     new as new_unbacked_pool,
     add,
     is_valid_couple as is_valid_couple_in_unbacked,
-    get_pegout,
-    is_genesis_elapsed,
-    drop_elapsed
 };
 
 const DUMMY_ADDRESS: address = @0xCAFE;
