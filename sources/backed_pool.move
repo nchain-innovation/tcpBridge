@@ -1,6 +1,6 @@
 module tcpbridge::backed_pool;
 
-use blockchain_oracle::blockchain_oracle::{HeaderChain, get_chain_length};
+use blockchain_oracle::blockchain_oracle::{HeaderChain, get_chain_height};
 use blockchain_oracle::spv::{MerkleProof, verify_spv};
 use sui::balance::Balance;
 use sui::clock::Clock;
@@ -10,7 +10,7 @@ use tcpbridge::transactions::{Tx, OutPoint, tx_to_bytes, serialise, extract_pego
 use tcpbridge::unbacked_pool::{UnbackedPool, get_pegout, is_genesis_elapsed, remove};
 
 const COIN_VALUE: u64 = 10; // TEMPORARY VALUE
-const MIN_PEGOUT_DELAY: u64 = 10; // TEMPORARY VALUE
+const MIN_PEGOUT_DELAY: u64 = 0; // TEMPORARY VALUE
 
 /// Error codes
 const EInvalidGenesis: u64 = 0;
@@ -63,13 +63,13 @@ public(package) fun pegout<T>(
     burning_tx: Tx,
     header_chain: &HeaderChain,
     merkle_proof: MerkleProof,
-    block_count: u64,
+    block_height: u64,
 ): Balance<T> {
     // Validate pegout time
-    assert!(get_chain_length(header_chain) - block_count >= MIN_PEGOUT_DELAY, EInvalidPegoutTime);
+    assert!(get_chain_height(header_chain) - block_height >= MIN_PEGOUT_DELAY, EInvalidPegoutTime);
     // Validate spv
     assert!(
-        verify_spv(tx_to_bytes(burning_tx), merkle_proof, block_count, header_chain),
+        verify_spv(tx_to_bytes(burning_tx), merkle_proof, block_height, header_chain),
         EInvalidMerkleProof,
     );
     // Validate input
@@ -108,6 +108,7 @@ public(package) fun is_valid_couple<T>(
 }
 
 /// === Test code ===
+
 /// PegOut against a given `genesis` in the `backed_pool`
 public fun pegout_for_test<T>(
     backed_pool: &mut BackedPool<T>,
@@ -115,14 +116,14 @@ public fun pegout_for_test<T>(
     burning_tx: Tx,
     header_chain: &HeaderChain,
     merkle_proof: MerkleProof,
-    block_count: u64,
+    block_height: u64,
     pegout_delay: u64,
 ): Balance<T> {
     // Validate pegout time
-    assert!(get_chain_length(header_chain) - block_count - 1 >= pegout_delay, EInvalidPegoutTime);
+    assert!(get_chain_height(header_chain) - block_height >= pegout_delay, EInvalidPegoutTime);
     // Validate spv
     assert!(
-        verify_spv(tx_to_bytes(burning_tx), merkle_proof, block_count, header_chain),
+        verify_spv(tx_to_bytes(burning_tx), merkle_proof, block_height, header_chain),
         EInvalidMerkleProof,
     );
     // Validate input

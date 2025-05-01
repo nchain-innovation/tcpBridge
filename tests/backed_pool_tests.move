@@ -39,6 +39,7 @@ const DUMMY_PEGOUT: vector<u8> = vector[
 /// Constants taken from BSV Mainnet - Block 894437
 const HEADER_SERIALISATION: vector<u8> =
     b"0000003621381cd7437a20225dda389eaa0a6b7ffb63d9858b67df0e000000000000000009d24ffd51f6a5a1622631091c10c55cc36c889f9576cf5dee5203ff5aa0183335630f68d75e13184db4ce01";
+const HEADER_CHAIN_WORK: u256 = 0x100010001;
 const TX_SERIALISATION: vector<u8> =
     b"0100000001371d897aaf7b1e437d85be167fb75928da8a7040fb623765ecf29d825d86b76f010000006a4730440220492d1e724008d8af5d63146035907228fdefc7aa21fb92ffc2029621fbec166e02205ed3b9c87adac5b3970897520c95cde6e8cb334364edd70370536b5730d4df1e412102db13cdc9989f118f6c865126d9b6e62886d214bdd9c190cb6062cb40642bc602ffffffff0200000000000000009b006a0e2054696d654f6654782e636f6d204c88516b6c464d514f717844726464595474575454647632336e4d492f6e58357268762b4c626b5a494f48756a55354c6646436c4e4248584f526474594c394244547351466b6f7844496643307264356464752b76624d667832586f51646e69753451747245496530447958515969533345514d614679476d6e7944416359474f775a4b6a2f7672513dd7090500000000001976a9149df0707f3f8e534441c055aca4bb816fbc1eadf488ac00000000";
 const PEGOUT: vector<u8> = b"01371d897aaf7b1e437d85be167fb75928da8a7040fb623765ecf29d825d86b7";
@@ -55,7 +56,12 @@ fun initialise_test(sui_value: u64, scenario: &mut Scenario) {
     // Mint SUI to dummy address
     let minted_sui = mint_for_testing<SUI>(sui_value, scenario.ctx());
     // HeaderChain
-    let header_chain = new_header_chain(decode(HEADER_SERIALISATION), scenario.ctx());
+    let header_chain = new_header_chain(
+        0,
+        decode(HEADER_SERIALISATION),
+        HEADER_CHAIN_WORK,
+        scenario.ctx(),
+    );
 
     // Transfers
     transfer::public_transfer(minted_sui, DUMMY_ADDRESS);
@@ -132,7 +138,7 @@ fun failed_pegout(
     genesis: OutPoint,
     burning_tx: Tx,
     merkle_proof: MerkleProof,
-    block_count: u64,
+    block_height: u64,
     pegout_delay: u64,
 ) {
     let correct_genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
@@ -155,7 +161,7 @@ fun failed_pegout(
             burning_tx,
             &header_chain,
             merkle_proof,
-            block_count,
+            block_height,
             pegout_delay,
         );
 
