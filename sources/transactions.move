@@ -6,8 +6,8 @@ use sui::bcs;
 const EInvalidTxid: u64 = 0;
 
 const TXID_LENGTH: u64 = 32;
-const PEGOUT_POSITION: u64 = 4; // PegOut is the first input
-const INPUT_LENGTH: u64 = 36;
+const INDEX_LENGTH: u64 = 4;
+const PEGOUT_POSITION: u64 = 5; // PegOut is the first input
 
 public struct Tx has copy, drop, store {
     bytes: vector<u8>,
@@ -41,7 +41,13 @@ public(package) fun tx_to_bytes(tx: Tx): vector<u8> {
 
 public(package) fun extract_pegout_input(tx: Tx): vector<u8> {
     let mut pegout: vector<u8> = vector::empty();
-    range_do!(PEGOUT_POSITION, PEGOUT_POSITION + INPUT_LENGTH, |i| pegout.push_back(tx.bytes[i]));
+    range_do!(PEGOUT_POSITION, PEGOUT_POSITION + TXID_LENGTH, |i| pegout.push_back(tx.bytes[i]));
+    pegout.reverse();
+    range_do!(
+        PEGOUT_POSITION + TXID_LENGTH,
+        PEGOUT_POSITION + TXID_LENGTH + INDEX_LENGTH,
+        |i| pegout.push_back(tx.bytes[i]),
+    );
     pegout
 }
 

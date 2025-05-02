@@ -27,10 +27,12 @@ fun test_outpoint_serialisation() {
 #[test]
 fun test_pegout_extraction() {
     use tcpbridge::transactions::{extract_pegout_input, new_tx};
+    let mut reversed_pegout = DUMMY_PEGOUT;
+    reversed_pegout.reverse();
 
     let mut dummy_tx: vector<u8> = vector::empty();
-    dummy_tx.append(vector[1, 0, 0, 0]); // Version
-    dummy_tx.append(DUMMY_PEGOUT);
+    dummy_tx.append(vector[1, 0, 0, 0, 1]); // Version, inputs
+    dummy_tx.append(reversed_pegout);
     dummy_tx.append(vector[2, 0, 0, 0]); // Index
     range_do!(0, 40, |i| dummy_tx.push_back(i)); // Random entries
 
