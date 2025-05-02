@@ -26,8 +26,7 @@ use tcpbridge::unbacked_pool::{
     get_pegout as get_pegout_unbacked_pool
 };
 
-const HEADER_CHAIN_ADDRESS: address =
-    @0x1; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
+const HEADER_CHAIN_ADDRESS: address = @0x1; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
 const EInvalidHeaderChain: u64 = 0;
 
 public struct IsValidGenesisEvent has copy, drop {
@@ -202,6 +201,7 @@ public entry fun pegout<T>(
         header_chain,
         new_merkle_proof(merkle_proof_positions, merkle_proof_hashes),
         block_height,
+        ctx,
     );
     // Transfer coins to sender
     transfer::public_transfer(from_balance(balance, ctx), ctx.sender())

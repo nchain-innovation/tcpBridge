@@ -6,7 +6,14 @@ use sui::balance::Balance;
 use sui::clock::Clock;
 use sui::coin::{Coin, into_balance};
 use sui::table::{Table, new as new_table};
-use tcpbridge::transactions::{Tx, OutPoint, tx_to_bytes, serialise, extract_pegout_input};
+use tcpbridge::transactions::{
+    Tx,
+    OutPoint,
+    tx_to_bytes,
+    serialise,
+    extract_pegout_input,
+    extract_address
+};
 use tcpbridge::unbacked_pool::{UnbackedPool, get_pegout, is_genesis_elapsed, remove};
 
 const COIN_VALUE: u64 = 10; // TEMPORARY VALUE
@@ -18,6 +25,7 @@ const EInvalidCoinValue: u64 = 1;
 const EInvalidPegoutTime: u64 = 2;
 const EInvalidMerkleProof: u64 = 3;
 const EInvalidPegoutInput: u64 = 4;
+const EInvalidTxSender: u64 = 5;
 
 public struct PegOutEntry<phantom T> has store {
     pegout: OutPoint,
@@ -64,6 +72,7 @@ public(package) fun pegout<T>(
     header_chain: &HeaderChain,
     merkle_proof: MerkleProof,
     block_height: u64,
+    ctx: &TxContext,
 ): Balance<T> {
     // Validate pegout time
     assert!(get_chain_height(header_chain) - block_height >= MIN_PEGOUT_DELAY, EInvalidPegoutTime);
@@ -78,6 +87,8 @@ public(package) fun pegout<T>(
         serialise(backed_pool.entry[genesis].pegout) == extract_pegout_input(burning_tx),
         EInvalidPegoutInput,
     );
+    // Validate transaction sender
+    assert!(extract_address(burning_tx) == ctx.sender(), EInvalidTxSender);
     // Update unbacked pool and return the balance
     let PegOutEntry { pegout: _, coin } = backed_pool.entry.remove(genesis);
     coin
@@ -118,6 +129,7 @@ public fun pegout_for_test<T>(
     merkle_proof: MerkleProof,
     block_height: u64,
     pegout_delay: u64,
+    ctx: &TxContext,
 ): Balance<T> {
     // Validate pegout time
     assert!(get_chain_height(header_chain) - block_height >= pegout_delay, EInvalidPegoutTime);
@@ -132,6 +144,8 @@ public fun pegout_for_test<T>(
         serialise(backed_pool.entry[genesis].pegout) == extract_pegout_input(burning_tx),
         EInvalidPegoutInput,
     );
+    // Validate transaction sender
+    assert!(extract_address(burning_tx) == ctx.sender(), EInvalidTxSender);
     // Update unbacked pool and return the balance
     let PegOutEntry { pegout: _, coin } = backed_pool.entry.remove(genesis);
     coin

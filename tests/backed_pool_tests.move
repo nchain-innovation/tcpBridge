@@ -36,14 +36,14 @@ const DUMMY_PEGOUT: vector<u8> = vector[
     14, 15, 16,
 ];
 
-/// Constants taken from BSV Mainnet - Block 894437
+/// Constants generated in regtest
 const HEADER_SERIALISATION: vector<u8> =
-    b"0000003621381cd7437a20225dda389eaa0a6b7ffb63d9858b67df0e000000000000000009d24ffd51f6a5a1622631091c10c55cc36c889f9576cf5dee5203ff5aa0183335630f68d75e13184db4ce01";
-const HEADER_CHAIN_WORK: u256 = 0x100010001;
+    b"0000002004cb4b91a317b4babfacd2f4118431c383ff652b67bda8277f3062fc77a84f75ed6b67f888a5cc7888db0534bd0d2379ff5c4e630cd63b5622fd2981712ff18d0ccb1468ffff7f2006000000";
+const HEADER_CHAIN_WORK: u256 = 0x16e;
 const TX_SERIALISATION: vector<u8> =
-    b"0100000001371d897aaf7b1e437d85be167fb75928da8a7040fb623765ecf29d825d86b76f010000006a4730440220492d1e724008d8af5d63146035907228fdefc7aa21fb92ffc2029621fbec166e02205ed3b9c87adac5b3970897520c95cde6e8cb334364edd70370536b5730d4df1e412102db13cdc9989f118f6c865126d9b6e62886d214bdd9c190cb6062cb40642bc602ffffffff0200000000000000009b006a0e2054696d654f6654782e636f6d204c88516b6c464d514f717844726464595474575454647632336e4d492f6e58357268762b4c626b5a494f48756a55354c6646436c4e4248584f526474594c394244547351466b6f7844496643307264356464752b76624d667832586f51646e69753451747245496530447958515969533345514d614679476d6e7944416359474f775a4b6a2f7672513dd7090500000000001976a9149df0707f3f8e534441c055aca4bb816fbc1eadf488ac00000000";
-const PEGOUT: vector<u8> = b"6fb7865d829df2ec653762fb40708ada2859b77f16be857d431e7baf7a891d37";
-const PEGOUT_INDEX: u32 = 1;
+    b"01000000031f8f95028358060d751b9dc66b800f4518c4ea7a196925df9cb49d5507f53a99000000006b483045022100b084e9c8f2f7490e17bde4a12287e70c0d4c177b8c038d8e05959af3d0239c3b0220407037a722dacd1d979fda6a56c116f7c1f2b98b8cc8d6efc23ae5962f8c09bb412103ecf8c9f7b1e840514726022ea6782ed2f7f809f209ec0249a3769e0bc3dea8e0000000009de98f6e47ee3c4fca3a12dee81e0a8ee84b9e38dc51d8846fb471ea2229b6be000000006b483045022100e75c0f605a2e34d10d1586292dbf8ff578d4da3d145959ab5170374f384a3b150220393e13a50f4da7249c0ad8b408910ac054a68806c2a64517e97fc21308cd20b3412103ecf8c9f7b1e840514726022ea6782ed2f7f809f209ec0249a3769e0bc3dea8e000000000f356aa93859eeb02d401c3bc7caa43a9fb71b695e6fcfc12d88b64ed1646b843000000006b4830450221008ec2e3f23e4b9092480d242cb85c2875f533525e47fe9407ef2279493b7cbfa702201ca622653f3226e5e39d613ee2e614e9845e42a3f70c26942ba3154edade5a05412103ecf8c9f7b1e840514726022ea6782ed2f7f809f209ec0249a3769e0bc3dea8e00000000001000000000000000023006a20000000000000000000000000000000000000000000000000000000000000cafe00000000";
+const PEGOUT: vector<u8> = b"993af507559db49cdf2569197aeac418450f806bc69d1b750d06588302958f1f";
+const PEGOUT_INDEX: u32 = 0;
 
 /// === Helper functions ===
 
@@ -140,6 +140,7 @@ fun failed_pegout(
     merkle_proof: MerkleProof,
     block_height: u64,
     pegout_delay: u64,
+    sender: address,
 ) {
     let correct_genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
     let correct_pegout = new_outpoint(new_txid(decode(PEGOUT)), PEGOUT_INDEX);
@@ -149,7 +150,7 @@ fun failed_pegout(
     initialise_and_pegin(correct_genesis, correct_pegout, &mut scenario);
 
     // PegOut
-    scenario.next_tx(DUMMY_ADDRESS);
+    scenario.next_tx(sender);
     {
         let (clock, admin_cap, unbacked_pool, mut backed_pool) = retrive_objects(&scenario);
         let header_chain = test_scenario::take_shared<HeaderChain>(&scenario);
@@ -163,6 +164,7 @@ fun failed_pegout(
             merkle_proof,
             block_height,
             pegout_delay,
+            scenario.ctx(),
         );
 
         // Return objects
@@ -268,18 +270,9 @@ fun test_pegin_pegout() {
 
         // PegOut
         let burning_tx = new_tx(decode(TX_SERIALISATION));
-        let positions = vector[true, false, false, false, false, false, false, false, false, false];
+        let positions = vector[true];
         let hashes = vector[
-            decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
-            decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-            decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-            decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-            decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-            decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-            decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-            decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-            decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
-            decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"),
+            decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
         ];
         let balance = pegout_for_test(
             &mut backed_pool,
@@ -289,6 +282,7 @@ fun test_pegin_pegout() {
             new_merkle_proof(positions, hashes),
             0,
             0,
+            scenario.ctx(),
         );
         assert_eq!(balance.value(), 10);
 
@@ -309,18 +303,9 @@ fun test_pegin_pegout() {
 fun test_failed_pegout_spv() {
     let genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
     let burning_tx = new_tx(decode(TX_SERIALISATION));
-    let positions = vector[true, false, false, false, false, false, false, false, false, false];
+    let positions = vector[false]; // This should be true
     let hashes = vector[
-        decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
-        decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-        decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-        decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-        decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-        decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-        decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-        decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-        decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"), // This one and the one below are swapped
-        decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
+        decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
     ];
     failed_pegout(
         genesis,
@@ -328,6 +313,7 @@ fun test_failed_pegout_spv() {
         new_merkle_proof(positions, hashes),
         0,
         0,
+        DUMMY_ADDRESS,
     );
 }
 
@@ -335,18 +321,9 @@ fun test_failed_pegout_spv() {
 fun test_failed_pegout_min_delay() {
     let genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
     let burning_tx = new_tx(decode(TX_SERIALISATION));
-    let positions = vector[true, false, false, false, false, false, false, false, false, false];
+    let positions = vector[true];
     let hashes = vector[
-        decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
-        decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-        decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-        decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-        decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-        decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-        decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-        decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-        decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
-        decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"),
+        decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
     ];
     failed_pegout(
         genesis,
@@ -354,6 +331,7 @@ fun test_failed_pegout_min_delay() {
         new_merkle_proof(positions, hashes),
         0,
         1,
+        DUMMY_ADDRESS,
     );
 }
 
@@ -361,18 +339,9 @@ fun test_failed_pegout_min_delay() {
 fun test_failed_pegout_wrong_genesis() {
     let genesis = new_outpoint(new_txid(DUMMY_PEGOUT), 0);
     let burning_tx = new_tx(decode(TX_SERIALISATION));
-    let positions = vector[true, false, false, false, false, false, false, false, false, false];
+    let positions = vector[true];
     let hashes = vector[
-        decode(b"d6ec1deb5dddfb6db243d1c0d00c7a1b4d1f0552da3c2f0e4afe3b952c066145"),
-        decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-        decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-        decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-        decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-        decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-        decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-        decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-        decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
-        decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"),
+        decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
     ];
     failed_pegout(
         genesis,
@@ -380,6 +349,7 @@ fun test_failed_pegout_wrong_genesis() {
         new_merkle_proof(positions, hashes),
         0,
         0,
+        DUMMY_ADDRESS,
     );
 }
 
@@ -389,21 +359,12 @@ fun test_failed_pegout_wrong_pegout_input() {
     // Coinbase Tx
     let burning_tx = new_tx(
         decode(
-            b"01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff1a03e5a50d2f7461616c2e636f6d2fc64d1336b0bec2aea10a0600ffffffff018729a112000000001976a914522cf9e7626d9bd8729e5a1398ece40dad1b6a2f88ac00000000",
+            b"02000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0502b6000101ffffffff0111f902950000000023210333ef519090e353c5718218e56014066d116f6d1b89c9f529e17cf8de64ef473cac00000000",
         ),
     );
-    let positions = vector[false, false, false, false, false, false, false, false, false, false];
+    let positions = vector[false];
     let hashes = vector[
-        decode(b"963369cc95862f5f1552a8c6d51f880f7d2aa13ebc0422a2ef4b9a5cc6980358"),
-        decode(b"fc148be6812955156f0843687e9ee05911861c42369d8983bcd6f0722c9fbc9f"),
-        decode(b"a4821559d834d1335c2d80a89af7961d9304d216fed588edbabbc78126c757ed"),
-        decode(b"5ce37e575cb31479aeec906b07eed5ed7cb778ba06b83c6b374f9b4cfa835027"),
-        decode(b"0603b2002fabf88886f91029b7a6680898ce0ea30a64ff56413e3629479a394b"),
-        decode(b"9f575bc39f27c4201a1b5d7a35233ca71340fa80a8a66426cf538b3e3dedf945"),
-        decode(b"42ee2cce00bd4acf655923136ed0a073a6a3e7f8128eba6601c7d4cb6ae6ff92"),
-        decode(b"d8d2461bc1f4de9a798267f9602e0f1c596fb35a448d128c3d34d35c37f22ec1"),
-        decode(b"0faebc0f55f1d427dadc41c46ad13de75e498158eb4b65be70893d3f7fd72578"),
-        decode(b"49ec00f2af38ebb5fdd08d62149d031b6d81a269d5e4adc21d2b54d0929758b1"),
+        decode(b"0fed0f340647d10b7c4033ebb5a4d4223f1be64d03fb416bd9f3b7432c78bece"),
     ];
     failed_pegout(
         genesis,
@@ -411,5 +372,25 @@ fun test_failed_pegout_wrong_pegout_input() {
         new_merkle_proof(positions, hashes),
         0,
         0,
+        DUMMY_ADDRESS,
+    );
+}
+
+#[test, expected_failure(abort_code = ::tcpbridge::backed_pool::EInvalidTxSender)]
+fun test_failed_pegout_wrong_sender() {
+    let genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
+    let burning_tx = new_tx(decode(TX_SERIALISATION));
+    let positions = vector[true];
+    let hashes = vector[
+        decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
+    ];
+    let wrong_address: address = @0xEFAC;
+    failed_pegout(
+        genesis,
+        burning_tx,
+        new_merkle_proof(positions, hashes),
+        0,
+        0,
+        wrong_address,
     );
 }
