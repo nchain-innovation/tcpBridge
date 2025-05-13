@@ -3,6 +3,7 @@ module tcpbridge::backed_pool_tests;
 
 use blockchain_oracle::blockchain_oracle::{new_header_chain, HeaderChain};
 use blockchain_oracle::spv::{MerkleProof, new as new_merkle_proof};
+use std::macros::range_do;
 use std::unit_test::assert_eq;
 use sui::clock::{Clock, create_for_testing, share_for_testing, increment_for_testing};
 use sui::coin::{Coin, mint_for_testing, from_balance};
@@ -14,10 +15,16 @@ use tcpbridge::backed_pool::{
     BackedPool,
     new as new_backed_pool,
     is_valid_genesis,
+    is_valid_genesis_with_chunks,
     is_valid_couple as is_valid_couple_in_backed,
+    is_valid_couple_with_chunks,
     pegin,
+    pegin_with_chunks,
     pegout_for_test,
-    get_coin_value
+    pegout_with_chunks_for_test,
+    get_coin_value,
+    get_coin_value_with_chunks,
+    update_chunks
 };
 use tcpbridge::transactions::{new_txid, new_tx, new_outpoint, OutPoint, Tx};
 use tcpbridge::unbacked_pool::{
@@ -127,6 +134,52 @@ fun initialise_and_pegin(genesis: OutPoint, pegout: OutPoint, scenario: &mut Sce
 
         // Check value of coin
         assert_eq!(get_coin_value(&backed_pool, genesis), 10);
+
+        // Return objects
+        return_to_inventory(clock, admin_cap, unbacked_pool, backed_pool);
+    };
+}
+
+/// Initialise and PegIn
+fun initialise_and_pegin_with_chunks(genesis: OutPoint, pegout: OutPoint, scenario: &mut Scenario) {
+    // Create AdminCap, UnbackedPool, BackedPool, Clock, Mint SUI
+    {
+        initialise_test(10, scenario);
+    };
+
+    // Add a couple to the UnBackedPool and fail PegIn
+    scenario.next_tx(DUMMY_ADDRESS);
+    {
+        let (clock, admin_cap, mut unbacked_pool, mut backed_pool) = retrive_objects(scenario);
+
+        // Add to unbacked pool
+        add(
+            &admin_cap,
+            &mut unbacked_pool,
+            genesis,
+            pegout,
+            &clock,
+        );
+
+        // PegIn
+        let coin = test_scenario::take_from_address<Coin<SUI>>(scenario, DUMMY_ADDRESS);
+        pegin_with_chunks(
+            &mut backed_pool,
+            &mut unbacked_pool,
+            genesis,
+            coin,
+            &clock,
+            scenario.ctx(),
+        );
+
+        // Check unbacked pool
+        assert_eq!(is_valid_couple_in_unbacked(&unbacked_pool, genesis, pegout), false);
+
+        // Check backed pool
+        assert_eq!(is_valid_couple_with_chunks(&backed_pool, genesis, pegout), true);
+
+        // Check value of coin
+        assert_eq!(get_coin_value_with_chunks(&backed_pool, genesis), 10);
 
         // Return objects
         return_to_inventory(clock, admin_cap, unbacked_pool, backed_pool);
@@ -289,6 +342,99 @@ fun test_pegin_pegout() {
         // Check backed pool
         assert_eq!(is_valid_genesis(&backed_pool, genesis), false);
         assert_eq!(is_valid_couple_in_backed(&backed_pool, genesis, pegout), false);
+
+        // Return objects
+        return_to_inventory(clock, admin_cap, unbacked_pool, backed_pool);
+        test_scenario::return_shared<HeaderChain>(header_chain);
+        transfer::public_transfer(from_balance(balance, scenario.ctx()), DUMMY_ADDRESS)
+    };
+
+    scenario.end();
+}
+
+#[test]
+fun test_pegin_pegout_with_chunks() {
+    let genesis = new_outpoint(new_txid(DUMMY_TXID), 0);
+    let pegout = new_outpoint(new_txid(decode(PEGOUT)), PEGOUT_INDEX);
+
+    // Create AdminCap, UnbackedPool, BackedPool, Clock, Mint SUI, HeaderChain
+    let mut scenario = test_scenario::begin(DUMMY_ADDRESS);
+    initialise_and_pegin_with_chunks(genesis, pegout, &mut scenario);
+
+    // PegOut
+    scenario.next_tx(DUMMY_ADDRESS);
+    {
+        let (clock, admin_cap, unbacked_pool, mut backed_pool) = retrive_objects(&scenario);
+        let header_chain = test_scenario::take_shared<HeaderChain>(&scenario);
+
+        // Create burning_tx chunks
+        let burning_tx_bytes = decode(TX_SERIALISATION);
+        // burning_tx_bytes.len() = 498
+        // create 3 chunks of 166 bytes, each split in two parts of 83 bytes each
+        // the last chunk is a dummy
+        let mut burning_tx_chunks: vector<vector<vector<u8>>> = vector::empty();
+        range_do!(0, 3, |i| {
+            let mut chunks_to_add: vector<vector<u8>> = vector::empty();
+            range_do!(0, 2, |j| {
+                let mut new_chunk: vector<u8> = vector::empty();
+                range_do!(0, 83, |k| new_chunk.push_back(burning_tx_bytes[166 * i + 83 * j + k]));
+                chunks_to_add.push_back(new_chunk);
+            });
+            burning_tx_chunks.push_back(chunks_to_add);
+        });
+        burning_tx_chunks.push_back(vector::empty<vector<u8>>());
+
+        // Update chunks
+        update_chunks(
+            &mut backed_pool,
+            genesis,
+            burning_tx_chunks[0],
+            0,
+        );
+
+        // Update chunks
+        update_chunks(
+            &mut backed_pool,
+            genesis,
+            burning_tx_chunks[1],
+            1,
+        );
+
+        // Update chunks
+        update_chunks(
+            &mut backed_pool,
+            genesis,
+            burning_tx_chunks[2],
+            2,
+        );
+
+        // Update chunks
+        update_chunks(
+            &mut backed_pool,
+            genesis,
+            burning_tx_chunks[3],
+            3,
+        );
+
+        // Pegout
+        let positions = vector[true];
+        let hashes = vector[
+            decode(b"f77209250e07087f098d3397772a8fa1b63ac475d1c32e7196653c5e42cc80e2"),
+        ];
+        let balance = pegout_with_chunks_for_test(
+            &mut backed_pool,
+            genesis,
+            &header_chain,
+            new_merkle_proof(positions, hashes),
+            0,
+            0,
+            scenario.ctx(),
+        );
+        assert_eq!(balance.value(), 10);
+
+        // Check backed pool
+        assert_eq!(is_valid_genesis_with_chunks(&backed_pool, genesis), false);
+        assert_eq!(is_valid_couple_with_chunks(&backed_pool, genesis, pegout), false);
 
         // Return objects
         return_to_inventory(clock, admin_cap, unbacked_pool, backed_pool);

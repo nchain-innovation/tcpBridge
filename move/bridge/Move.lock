@@ -2,7 +2,7 @@
 
 [move]
 version = 3
-manifest_digest = "1EEB632AB5EBBDF04F81541DA60C58FEC6955E0E79EA6397296438586AE27717"
+manifest_digest = "5B67BCD99CEAC222FD3554A6BA486C4C051FDDF47BDC09C3BE66B5DC941EF704"
 deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -14,7 +14,7 @@ dependencies = [
 
 [[move.package]]
 id = "Bridge"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "fbb68879cbd1", subdir = "crates/sui-framework/packages/bridge" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "e54b798790ed", subdir = "crates/sui-framework/packages/bridge" }
 
 dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
@@ -24,11 +24,11 @@ dependencies = [
 
 [[move.package]]
 id = "MoveStdlib"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "fbb68879cbd1", subdir = "crates/sui-framework/packages/move-stdlib" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "e54b798790ed", subdir = "crates/sui-framework/packages/move-stdlib" }
 
 [[move.package]]
 id = "Sui"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "fbb68879cbd1", subdir = "crates/sui-framework/packages/sui-framework" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "e54b798790ed", subdir = "crates/sui-framework/packages/sui-framework" }
 
 dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
@@ -36,7 +36,7 @@ dependencies = [
 
 [[move.package]]
 id = "SuiSystem"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "fbb68879cbd1", subdir = "crates/sui-framework/packages/sui-system" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "e54b798790ed", subdir = "crates/sui-framework/packages/sui-system" }
 
 dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
@@ -45,7 +45,7 @@ dependencies = [
 
 [[move.package]]
 id = "blockchain_oracle"
-source = { local = "../blockchain_oracle" }
+source = { local = "../oracle" }
 
 dependencies = [
   { id = "Bridge", name = "Bridge" },
@@ -62,7 +62,7 @@ flavor = "sui"
 [env]
 
 [env.localnet]
-chain-id = "fe950fa5"
-original-published-id = "0x360f6c448c91697e2fdf1798bc166787017a6873bb907cd0d798dfa9edf1de57"
-latest-published-id = "0x360f6c448c91697e2fdf1798bc166787017a6873bb907cd0d798dfa9edf1de57"
+chain-id = "0c767579"
+original-published-id = "0xc846dde5b0405eb2b6b165dd3b6b494a56b756ae9dab916e6d8621c956e8f0e3"
+latest-published-id = "0xc846dde5b0405eb2b6b165dd3b6b494a56b756ae9dab916e6d8621c956e8f0e3"
 published-version = "1"

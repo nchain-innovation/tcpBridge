@@ -1,3 +1,20 @@
-build/*
+# Move
+**/build/*
 .trace
 .coverage_map.mvcov
+
+# MacOS
+.DS_Store
+
+# Python
+__pycache__/
+*.ipynb
+
+# Rust
+**/target
+
+# Project specific
+keys/
+data/
+proofs/
+wallet.json

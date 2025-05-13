@@ -10,10 +10,15 @@ use tcpbridge::admin::BridgeAdmin;
 use tcpbridge::backed_pool::{
     BackedPool,
     is_valid_couple as is_valid_couple_backed_pool,
+    is_valid_couple_with_chunks,
     new as new_backed_pool,
     pegin as pegin_backed_pool,
+    pegin_with_chunks as pegin_with_chunks_backed_pool,
     pegout as pegout_backed_pool,
-    get_coin_value as get_coin_value_backed_pool
+    pegout_with_chunks as pegout_with_chunks_backed_pool,
+    get_coin_value as get_coin_value_backed_pool,
+    get_coin_value_with_chunks as get_coin_value_backed_pool_with_chunks,
+    update_chunks as update_chunks_backed_pool
 };
 use tcpbridge::transactions::{new_tx, new_txid, new_outpoint, serialise};
 use tcpbridge::unbacked_pool::{
@@ -26,7 +31,8 @@ use tcpbridge::unbacked_pool::{
     get_pegout as get_pegout_unbacked_pool
 };
 
-const HEADER_CHAIN_ADDRESS: address = @0x1; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
+const HEADER_CHAIN_ADDRESS: address =
+    @0x2665df4be2279a6e3244a22449a7107ee21e7558206c052cf88be65b94851d97; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
 const EInvalidHeaderChain: u64 = 0;
 
 public struct IsValidGenesisEvent has copy, drop {
@@ -216,6 +222,130 @@ public entry fun get_coin_value<T>(
     let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
     event::emit(CoinValueEvent {
         coin_value: get_coin_value_backed_pool(&bridge.backed_pool, genesis),
+    });
+}
+
+/// ==== Backed pool methods with chunks ====
+
+/// Query the validity of <Genesis: (PegOut, Time)> in the backed pool
+public entry fun is_valid_for_pegout_with_chunks<T>(
+    bridge: &Bridge<T>,
+    genesis_txid: vector<u8>,
+    genesis_index: u32,
+    pegout_txid: vector<u8>,
+    pegout_index: u32,
+) {
+    let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
+    let pegout = new_outpoint(new_txid(pegout_txid), pegout_index);
+    let is_valid = is_valid_couple_with_chunks(
+        &bridge.backed_pool,
+        genesis,
+        pegout,
+    );
+
+    event::emit(IsValidGenesisEvent {
+        is_valid,
+    });
+}
+
+/// PegIn against a given `genesis` in the `unbacked_pool`
+public entry fun pegin_with_chunks<T>(
+    bridge: &mut Bridge<T>,
+    genesis_txid: vector<u8>,
+    genesis_index: u32,
+    coin: &mut Coin<T>,
+    pegin_amount: u64,
+    clock: &Clock,
+    ctx: &mut TxContext,
+) {
+    let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
+    let pegin_coin = coin.split(pegin_amount, ctx);
+
+    pegin_with_chunks_backed_pool(
+        &mut bridge.backed_pool,
+        &mut bridge.unbacked_pool,
+        genesis,
+        pegin_coin,
+        clock,
+        ctx,
+    );
+}
+
+/// PegOut against a given `genesis` in the `backed_pool`
+public entry fun pegout_with_chunks<T>(
+    bridge: &mut Bridge<T>,
+    genesis_txid: vector<u8>,
+    genesis_index: u32,
+    header_chain: &HeaderChain,
+    merkle_proof_positions: vector<bool>,
+    merkle_proof_hashes: vector<vector<u8>>,
+    block_height: u64,
+    ctx: &mut TxContext,
+) {
+    // Validate HeaderChain
+    let header_chain_address = object::id(header_chain);
+    assert!(header_chain_address == bridge.header_chain_id, EInvalidHeaderChain);
+    // Retrieve PegOutEntry
+    let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
+    let balance = pegout_with_chunks_backed_pool(
+        &mut bridge.backed_pool,
+        genesis,
+        header_chain,
+        new_merkle_proof(merkle_proof_positions, merkle_proof_hashes),
+        block_height,
+        ctx,
+    );
+    // Transfer coins to sender
+    transfer::public_transfer(from_balance(balance, ctx), ctx.sender())
+}
+
+/// Update burning_tx chunks for `genesis`
+/// It overrides previous values
+public entry fun update_chunks<T>(
+    bridge: &mut Bridge<T>,
+    genesis_txid: vector<u8>,
+    genesis_index: u32,
+    chunk_one: vector<u8>,
+    chunk_two: vector<u8>,
+    chunk_three: vector<u8>,
+    chunk_four: vector<u8>,
+    chunk_five: vector<u8>,
+    chunk_six: vector<u8>,
+    chunk_seven: vector<u8>,
+    chunk_eight: vector<u8>,
+    chunk_nine: vector<u8>,
+    chunk_ten: vector<u8>,
+    chunks_index: u64,
+) {
+    let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
+    let mut new_chunks = vector::empty();
+    new_chunks.push_back(chunk_one);
+    new_chunks.push_back(chunk_two);
+    new_chunks.push_back(chunk_three);
+    new_chunks.push_back(chunk_four);
+    new_chunks.push_back(chunk_five);
+    new_chunks.push_back(chunk_six);
+    new_chunks.push_back(chunk_seven);
+    new_chunks.push_back(chunk_eight);
+    new_chunks.push_back(chunk_nine);
+    new_chunks.push_back(chunk_ten);
+    update_chunks_backed_pool(
+        &mut bridge.backed_pool,
+        genesis,
+        new_chunks,
+        chunks_index,
+    );
+}
+
+/// Get value of the coin wrapped in `genesis`
+public entry fun get_coin_value_with_chunks<T>(
+    bridge: &mut Bridge<T>,
+    genesis_txid: vector<u8>,
+    genesis_index: u32,
+) {
+    let genesis = new_outpoint(new_txid(genesis_txid), genesis_index);
+    event::emit(CoinValueEvent {
+        coin_value: get_coin_value_backed_pool_with_chunks(&bridge.backed_pool, genesis),
     });
 }
 

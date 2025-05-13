@@ -5,7 +5,7 @@ use sui::table::{Table, new as new_table};
 use tcpbridge::admin::BridgeAdmin;
 use tcpbridge::transactions::OutPoint;
 
-const PEGIN_TIME: u64 = 60 * 1000; //10 * 60 * 1000; // 10 minutes
+const PEGIN_TIME: u64 = 10 * 60 * 1000; // 10 minutes
 
 /// Error codes
 const EInvalidGenesis: u64 = 0;

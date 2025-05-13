@@ -1,0 +1,15 @@
+[package]
+name = "sui_cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+clap = "4.5.37"
+hex = "0.4.3"
+serde = "1.0.219"
+sui-jsonrpc = "0.15.1"
+sui-transaction-builder = "0.0.4"
+sui_sdk = { git = "https://github.com/mystenlabs/sui", package = "sui-sdk"}
+tokio = { version = "1.2", features = ["full"] }
+toml = "0.8.22"
