@@ -46,19 +46,19 @@ Then, in each folder create a `setup.toml` file and populate it as follows:
 - For the POB engine
     ```
     index = output_index
-    ``
+    ```
 
 Then, execute the following command
 
 ```
-cargo run -- setup
+cargo run --release -- setup
 ```
 
 This will generate proving/verifying keys for both engine in the folder `zk_engine/data/`.
 If you want to generate keys only for one of the engines, execute
 
 ```
-cargo run -- <ENGINE_NAME> setup
+cargo run --release -- <ENGINE_NAME> setup
 ```
 
 where `<ENGINE_NAME>` can be either `tcp-engine` or `pob-engine`.
@@ -74,7 +74,7 @@ where `<ENGINE_NAME>` can be either `tcp-engine` or `pob-engine`.
 To prove statements, the command is
 
 ```
-cargo run -- <ENGINE_NAME> prove
+cargo run --release -- <ENGINE_NAME> prove
 ```
 
 The command will fetch the proving key and the data to generate a proof for from the file `prove.toml` contained in `zk_engine/data/<ENGINE_NAME>/configs`.
@@ -133,7 +133,7 @@ where
 To verify statements, the command is
 
 ```
-cargo run -- <ENGINE_NAME> verify
+cargo run --release -- <ENGINE_NAME> verify
 ```
 
 The command will fetch the verifying key and the data to verify a proof for.
