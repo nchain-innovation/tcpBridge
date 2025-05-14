@@ -10,7 +10,7 @@ It contains:
 
 ## Requirements
 
-The repository requires Python >= 3.12, Rust, and Sui.
+The repository requires Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install), and [Sui](https://docs.sui.io/guides/developer/getting-started).
 
 ## Getting started
 
