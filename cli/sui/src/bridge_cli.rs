@@ -314,7 +314,10 @@ pub(crate) async fn pegout(client: SuiClient, pegout: Pegout) -> Result<(), anyh
     Ok(())
 }
 
-pub(crate) async fn pegin_with_chunks(client: SuiClient, pegin: Pegin) -> Result<(), anyhow::Error> {
+pub(crate) async fn pegin_with_chunks(
+    client: SuiClient,
+    pegin: Pegin,
+) -> Result<(), anyhow::Error> {
     let (_, bridge_obj_arg, bridge_package_id) = crate::configs::bridge_config(&client, true).await;
     let mut wallet = WalletContext::new(wallet_config(), None, None)?;
     let active_address = wallet.active_address()?;
@@ -361,7 +364,13 @@ pub(crate) async fn pegin_with_chunks(client: SuiClient, pegin: Pegin) -> Result
     Ok(())
 }
 
-pub(crate) async fn update_chunks(client: SuiClient, genesis_txid: String, genesis_index: u32, new_chunks: Vec<Vec<u8>>, chunks_index: u64) -> Result<(), anyhow::Error> {
+pub(crate) async fn update_chunks(
+    client: SuiClient,
+    genesis_txid: String,
+    genesis_index: u32,
+    new_chunks: Vec<Vec<u8>>,
+    chunks_index: u64,
+) -> Result<(), anyhow::Error> {
     let (_, bridge_obj_arg, bridge_package_id) = crate::configs::bridge_config(&client, true).await;
     let mut wallet = WalletContext::new(wallet_config(), None, None)?;
     let active_address = wallet.active_address()?;
@@ -416,7 +425,10 @@ pub(crate) async fn update_chunks(client: SuiClient, genesis_txid: String, genes
     Ok(())
 }
 
-pub(crate) async fn pegout_with_chunks(client: SuiClient, pegout: Pegout) -> Result<(), anyhow::Error> {
+pub(crate) async fn pegout_with_chunks(
+    client: SuiClient,
+    pegout: Pegout,
+) -> Result<(), anyhow::Error> {
     let (header_chain_arg, _) = oracle_config(false);
     let (_, bridge_obj_arg, bridge_package_id) = crate::configs::bridge_config(&client, true).await;
     let mut wallet = WalletContext::new(wallet_config(), None, None)?;
@@ -434,7 +446,9 @@ pub(crate) async fn pegout_with_chunks(client: SuiClient, pegout: Pegout) -> Res
     for i in 0..3 {
         let mut chunks_to_add: Vec<Vec<u8>> = vec![];
         for j in 0..10 {
-            chunks_to_add.push(burning_tx_bytes[100000 * i + 10000 * j..100000 * i + 10000 * (j+1)].to_vec());
+            chunks_to_add.push(
+                burning_tx_bytes[100000 * i + 10000 * j..100000 * i + 10000 * (j + 1)].to_vec(),
+            );
         }
         burning_tx_chunks.push(chunks_to_add);
     }
@@ -451,10 +465,38 @@ pub(crate) async fn pegout_with_chunks(client: SuiClient, pegout: Pegout) -> Res
     }
 
     // Update chunks
-    update_chunks(client.clone(), pegout.genesis_txid.clone(), pegout.genesis_index, burning_tx_chunks[0].clone(), 0).await?;
-    update_chunks(client.clone(), pegout.genesis_txid.clone(), pegout.genesis_index, burning_tx_chunks[1].clone(), 1).await?;
-    update_chunks(client.clone(), pegout.genesis_txid.clone(), pegout.genesis_index, burning_tx_chunks[2].clone(), 2).await?;
-    update_chunks(client.clone(), pegout.genesis_txid.clone(), pegout.genesis_index, last_chunk, 3).await?;
+    update_chunks(
+        client.clone(),
+        pegout.genesis_txid.clone(),
+        pegout.genesis_index,
+        burning_tx_chunks[0].clone(),
+        0,
+    )
+    .await?;
+    update_chunks(
+        client.clone(),
+        pegout.genesis_txid.clone(),
+        pegout.genesis_index,
+        burning_tx_chunks[1].clone(),
+        1,
+    )
+    .await?;
+    update_chunks(
+        client.clone(),
+        pegout.genesis_txid.clone(),
+        pegout.genesis_index,
+        burning_tx_chunks[2].clone(),
+        2,
+    )
+    .await?;
+    update_chunks(
+        client.clone(),
+        pegout.genesis_txid.clone(),
+        pegout.genesis_index,
+        last_chunk,
+        3,
+    )
+    .await?;
 
     // Call pegout
     let mut builder = ProgrammableTransactionBuilder::new();

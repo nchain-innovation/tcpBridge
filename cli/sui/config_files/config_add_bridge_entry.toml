@@ -1,4 +1,4 @@
-genesis_txid = "4cf9cf44bf11e22e417a1ca897ac76366d5244acb85cbafd4b8769cac212b7a4"
+genesis_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
 genesis_index = 0
-pegout_txid = "6f3454c8dac281b019805f3c9721ef86ac86c933bdc62e6b747a230f58384ca7"
+pegout_txid = "f837ed42c9d9ea049d164e04d69431bc14167b4b8ec654bba14291e166ed15da"
 pegout_index = 0

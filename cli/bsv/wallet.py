@@ -417,7 +417,7 @@ class WalletManager:
             "prev_amount": 1,
         }
         # Write data
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/pob_engine/proving_data.toml"), "w") as f:
+        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/pob_engine/configs/prove.toml"), "w") as f:
             toml.dump(data, f)
             f.close()
         # Generate proof

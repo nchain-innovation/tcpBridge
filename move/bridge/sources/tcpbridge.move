@@ -32,7 +32,7 @@ use tcpbridge::unbacked_pool::{
 };
 
 const HEADER_CHAIN_ADDRESS: address =
-    @0x2665df4be2279a6e3244a22449a7107ee21e7558206c052cf88be65b94851d97; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
+    @0xca071c9725f9332c85bba033b30663050bd25bd68d97605bafcb33f88d62164e; // TEMPORARY VALUE - TO BE FILLED IN ONCE THE HEADER CHAIN HAS BEEN CREATED
 const EInvalidHeaderChain: u64 = 0;
 
 public struct IsValidGenesisEvent has copy, drop {

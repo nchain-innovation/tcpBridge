@@ -8,18 +8,18 @@ use sui_sdk::{
     },
 };
 
-const BRIDGE_ADMIN_ID: &str = "cc84d6f6c0d77fc2696f043e41d81b2a3ad8acbb7c5041b63954abc1050b678c";
+const BRIDGE_ADMIN_ID: &str = "d58e056abdf5adb09bf36c74d8a8e3526019bd66bfc4089c79fc72726e2fd3e5";
 
-const BRIDGE_ID: &str = "4fe45088bf79dcda6acdc0be6b076ef16ab4b59bf7d1f5322d275a62b90780fd";
-const BRIDGE_SHARED_VERSION: u64 = 7678;
+const BRIDGE_ID: &str = "c74e333d6c208ffa18f94a14951d485b23a6bb99bcbff7a1063f8e35c57f0c59";
+const BRIDGE_SHARED_VERSION: u64 = 4;
 
-const BRIDGE_PACKAGE_ID: &str = "c846dde5b0405eb2b6b165dd3b6b494a56b756ae9dab916e6d8621c956e8f0e3";
+const BRIDGE_PACKAGE_ID: &str = "75dcf92661af82906662ff018affa057146ba80194e474d03f28feba42422ce7";
 
-const HEADER_CHAIN_ID: &str = "2665df4be2279a6e3244a22449a7107ee21e7558206c052cf88be65b94851d97";
-const HEADER_CHAIN_SHARED_VERSION: u64 = 2;
+const HEADER_CHAIN_ID: &str = "ca071c9725f9332c85bba033b30663050bd25bd68d97605bafcb33f88d62164e";
+const HEADER_CHAIN_SHARED_VERSION: u64 = 3;
 
 const BLOCKCHAIN_ORACLE_ID: &str =
-    "6d1950a17368b44ff5a76317ce33c97335560fac2956d6a1c422d2e3c2b0c0ef";
+    "6b685d7912b6aee51e2bedbc70e39459fd68beab9e8062dbbfcc9962d4c3aa0e";
 
 pub fn oracle_config(mutable_header_chain: bool) -> (ObjectArg, ObjectID) {
     (

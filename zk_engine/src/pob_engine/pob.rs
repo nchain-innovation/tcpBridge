@@ -44,6 +44,7 @@ use rand_chacha::rand_core::SeedableRng;
 use crate::utils::{data_to_serialisation, read_from_file, save_to_file};
 
 use crate::pob_engine::proving_data::ProvingData;
+use crate::pob_engine::setup_data::SetupData;
 
 pub struct PCDGroth16;
 impl ECCyclePCDConfig<ScalarFieldMNT4, ScalarFieldMNT6> for PCDGroth16 {
@@ -78,8 +79,7 @@ const TCP_SYSTEM_KEYS: &str = "data/tcp_engine/keys/";
 const TCP_SYSTEM_PROOFS: &str = "data/tcp_engine/proofs/";
 const POB_SYSTEM_KEYS: &str = "data/pob_engine/keys/";
 const POB_SYSTEM_PROOFS: &str = "data/pob_engine/proofs/";
-const POB_INDEX: usize = 1; // Index of the burnt output
-const POB_DATA: &str = "data/pob_engine/";
+const POB_DATA: &str = "data/pob_engine/configs/";
 
 fn generate_pob_predicate() -> PoB {
     // Load the key of the TCP System
@@ -97,8 +97,11 @@ fn generate_pob_predicate() -> PoB {
         .map_err(|e| anyhow!("Failed to deserialize help_vk. Error: {}", e))
         .unwrap();
 
+    // Setup data
+    let setup_data = SetupData::load(POB_DATA.to_owned() + "setup.toml").unwrap();
+
     // PoB
-    PoB::new(&crh_pp, &help_vk, POB_INDEX)
+    PoB::new(&crh_pp, &help_vk, setup_data.index)
 }
 
 pub fn setup() {
@@ -136,7 +139,7 @@ pub fn setup() {
 }
 
 pub fn prove() {
-    let proving_data = ProvingData::load(&(POB_DATA.to_owned() + "proving_data.toml")).unwrap();
+    let proving_data = ProvingData::load(&(POB_DATA.to_owned() + "prove.toml")).unwrap();
     let genesis_txid =
         FieldArray::<1, ScalarFieldMNT4, Config>::new([ScalarFieldMNT4::from_le_bytes_mod_order(
             &Hash256::decode(&proving_data.genesis_txid).unwrap().0,

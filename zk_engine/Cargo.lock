@@ -352,7 +352,7 @@ dependencies = [
 [[package]]
 name = "ark-pcd"
 version = "0.1.0"
-source = "git+https://github.com/BarbacoviF/pcd.git?branch=barbacovif%2Fuse-short-weierstrass-curve#1bd8f435cfaff4dff65680270128a035cbbe4d2c"
+source = "git+https://github.com/nchain-innovation/pcd.git?branch=teranodegroup%2Fuse-short-weierstrass-curve#1bd8f435cfaff4dff65680270128a035cbbe4d2c"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
@@ -529,7 +529,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 [[package]]
 name = "bitcoin_r1cs"
 version = "0.1.0"
-source = "git+https://github.com/nchain-innovation/bitcoin_r1cs.git?branch=ark-3.0#d7f969540239bbffbf32257dc7e6033555031f00"
+source = "git+https://github.com/nchain-innovation/bitcoin_r1cs.git?branch=ark-3.0#46876b19cfad012c88d12213f9e71c49c6bebb50"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -1556,7 +1556,7 @@ dependencies = [
 [[package]]
 name = "transaction_chain_proof"
 version = "0.1.0"
-source = "git+https://github.com/nchain-innovation/transaction_chain_proof.git#c823733950d7dd939c213a58b0dbdfc75c9afe7c"
+source = "git+https://github.com/nchain-innovation/transaction_chain_proof.git#beffd037078bfecaa22b47ca19cd0569d9b776eb"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ff",

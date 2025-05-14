@@ -8,14 +8,6 @@ from bsv.block_header import BlockHeader, MerkleProof
 from bsv.utils import tx_from_id, setup_network_connection
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 
-
-# Indices
-ALICE_INDEX = 0
-BOB_INDEX = 1
-CHARLIE_INDEX = 2
-ISSUER_INDEX = 3
-N_USERS = 4
-
 # TCP
 INPUT_INDEX = 1
 OUTPUT_INDEX = 0
@@ -35,16 +27,8 @@ def get_bulk_tx_data(txid: str, network: WoCInterface | RPCInterface):
     payload = { "txids": [txid] }
     return requests.post(url = api_request, json = payload)
 
-def map_user_to_index(user_name: str) -> int:
-    match user_name:
-        case "alice":
-            return ALICE_INDEX
-        case "bob":
-            return BOB_INDEX
-        case "charlie":
-            return CHARLIE_INDEX
-        case _:
-            raise ValueError("User not recognised.")
+def map_user_to_index(user_name: str, wallet_manager: WalletManager) -> int:
+    return wallet_manager.names.index(user_name)
         
 def conditional_generate_block(network: WoCInterface | RPCInterface):
     if isinstance(network, RPCInterface):
@@ -59,14 +43,15 @@ def conditional_generate_block(network: WoCInterface | RPCInterface):
 def setup(wallet_manager: WalletManager):
     if isinstance(wallet_manager.network, RPCInterface):
         # Get funding
-        for i in range(N_USERS):
+        for i in range(len(wallet_manager.names)):
             wallet_manager.get_funding(i)
     
     conditional_generate_block(wallet_manager.network)
 
     # Setup for everyone except issuer
-    for i in range(N_USERS-1):
-        wallet_manager.setup(i)
+    for i, name in enumerate(wallet_manager.names):
+        if name != "issuer":
+            wallet_manager.setup(i)
 
     conditional_generate_block(wallet_manager.network)
 
@@ -75,28 +60,29 @@ def setup(wallet_manager: WalletManager):
     return
     
 def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
-    user = map_user_to_index(user_name)
+    user = map_user_to_index(user_name, wallet_manager)
+    issuer_index = map_user_to_index("issuer", wallet_manager)
 
     # Generate genesis
-    print(f"Generating genesis transaction...")
+    print(f"\nGenerating genesis transaction...")
 
     wallet_manager.generate_genesis_for_pegin(user)
     
-    print(f"Genesis transaction generated at: {wallet_manager.genesis_utxos[user][-1]}")
+    print(f"\nGenesis transaction generated at: {wallet_manager.genesis_utxos[user][-1]}")
 
     conditional_generate_block(wallet_manager.network)
 
     # Generate pegout
-    print(f"Generating pegout UTXO...")
+    print(f"\nGenerating pegout UTXO...")
 
-    wallet_manager.generate_pegout(user, ISSUER_INDEX, -1)
+    wallet_manager.generate_pegout(user, issuer_index, -1)
     
-    print(f"Pegout UTXO generated at: {wallet_manager.pegout_utxos[user][-1]}")
+    print(f"\nPegout UTXO generated at: {wallet_manager.pegout_utxos[user][-1]}")
 
     conditional_generate_block(wallet_manager.network)
 
     # Save data to file
-    print(f"Add bridge entry...")
+    print(f"\nAdd bridge entry...")
 
     data = {
         "genesis_txid" : wallet_manager.genesis_utxos[user][-1].prev_tx,
@@ -116,7 +102,7 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    print(f"Added bridge entry: \n\tgenesis:{wallet_manager.genesis_utxos[user][-1]}\n\tpegout:{wallet_manager.pegout_utxos[user][-1]}")
+    print(f"Added bridge entry: \n\tgenesis: {wallet_manager.genesis_utxos[user][-1]}\n\tpegout: {wallet_manager.pegout_utxos[user][-1]}")
 
 
     # Save data to file
@@ -139,18 +125,18 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    print(f"Successfully pegged in for \n\tgenesis:{wallet_manager.genesis_utxos[user][-1]}")
+    print(f"\nSuccessfully pegged in for \n\tgenesis: {wallet_manager.genesis_utxos[user][-1]}")
 
     return
 
 def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_index: int, blockhash: str, block_height: int):
-    user = map_user_to_index(user_name)
+    user = map_user_to_index(user_name, wallet_manager)
     burnt_token = wallet_manager.burnt_tokens[user][token_index]
     burning_tx = tx_from_id(burnt_token.burning_txid, wallet_manager.network)
     merkle_proof = MerkleProof.get_merkle_proof(blockhash, burnt_token.burning_txid, wallet_manager.network)
 
     # Pegout
-    print(f"Pegout...")
+    print(f"\nPegout...")
 
     data = {
         "genesis_txid" : burnt_token.genesis_txid,
@@ -173,12 +159,12 @@ def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_inde
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    print(f"Successfully pegged out for \n\tgenesis:{burnt_token.genesis_txid}")
+    print(f"\nSuccessfully pegged out for \n\tgenesis: {burnt_token.genesis_txid}")
 
     return
 
 def pegout(wallet_manager: WalletManager, user_name: str, token_index: int):  
-    user = map_user_to_index(user_name)
+    user = map_user_to_index(user_name, wallet_manager)
     burnt_token = wallet_manager.burnt_tokens[user][token_index]
     burning_tx = tx_from_id(burnt_token.burning_txid, wallet_manager.network)
     bulk_tx_data = get_bulk_tx_data(burnt_token.burning_txid, wallet_manager.network).json()
@@ -186,7 +172,7 @@ def pegout(wallet_manager: WalletManager, user_name: str, token_index: int):
     merkle_proof = MerkleProof.get_merkle_proof(bulk_tx_data[0]["blockhash"], burnt_token.burning_txid, wallet_manager.network)
 
     # Pegout
-    print(f"Pegout...")
+    print(f"\nPegout...")
 
     data = {
         "genesis_txid" : burnt_token.genesis_txid,
@@ -209,13 +195,13 @@ def pegout(wallet_manager: WalletManager, user_name: str, token_index: int):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    print(f"Successfully pegged out for \n\tgenesis:{burnt_token.genesis_txid}")
+    print(f"\nSuccessfully pegged out for \n\tgenesis: {burnt_token.genesis_txid}")
 
     return
     
 def transfer(wallet_manager: WalletManager, sender_name: str, receiver_name: str, token_index: int):
-    sender = map_user_to_index(sender_name)
-    receiver = map_user_to_index(receiver_name)
+    sender = map_user_to_index(sender_name, wallet_manager)
+    receiver = map_user_to_index(receiver_name, wallet_manager)
 
     print(f"Transferring from {sender_name} to {receiver_name}")
     wallet_manager.transfer_token(sender, receiver, token_index)
@@ -224,11 +210,11 @@ def transfer(wallet_manager: WalletManager, sender_name: str, receiver_name: str
     return
 
 def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
-    user = map_user_to_index(user_name)
+    user = map_user_to_index(user_name, wallet_manager)
 
-    print(f"Burning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
+    print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
     wallet_manager.burn_token(user, token_index)
-    print(f"Token successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
+    print(f"\nToken successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
 
     conditional_generate_block(wallet_manager.network)
 
