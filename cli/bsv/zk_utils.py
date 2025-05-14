@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-sys.path.append("/Users/federicobarbacovi/Documents/github_repositories/zkscript_package")
+sys.path.append(Path(__file__).parent.parent.parent / "zkscript_package")
 
 from elliptic_curves.data_structures.vk import PreparedVerifyingKey
 from elliptic_curves.data_structures.zkscript import ZkScriptVerifyingKey

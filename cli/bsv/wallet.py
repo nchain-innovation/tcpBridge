@@ -9,7 +9,6 @@ import toml
 
 sys.path.append(Path(__file__).parent.parent.parent / "zkscript_package")
 
-
 from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4753
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753
 from src.zkscript.script_types.unlocking_keys.reftx import RefTxUnlockingKey
