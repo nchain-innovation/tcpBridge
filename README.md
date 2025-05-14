@@ -20,7 +20,7 @@ To initialise the repository, execute the following commands:
 ```
 git clone https://github.com/nchain-innovation/tcpBridge.git
 cd tcpBridge
-git submodule update --recursive
+git submodule update --init --recursive
 cd zkscript_package
 pip install -r requirements.txt
 ```
