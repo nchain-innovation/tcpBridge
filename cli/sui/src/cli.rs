@@ -69,6 +69,6 @@ pub struct Pegout {
 
 #[derive(Clone, Deserialize)]
 pub struct MerkleProof {
-    pub positions: Vec<bool>,
+    pub positions: Vec<u32>,
     pub hashes: Vec<String>,
 }

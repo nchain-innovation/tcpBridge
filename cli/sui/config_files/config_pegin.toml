@@ -1,3 +1,3 @@
-genesis_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+genesis_txid = "895f79185a1be5c881ce8e870469c1b54701cc157f6f5bed7ffef41145b03325"
 genesis_index = 0
-pegin_amount = 10
+pegin_amount = 1000

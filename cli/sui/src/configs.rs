@@ -33,7 +33,7 @@ pub fn oracle_config(mutable_header_chain: bool) -> (ObjectArg, ObjectID) {
 }
 
 pub fn wallet_config() -> &'static Path {
-    Path::new("/Users/federicobarbacovi/.sui/sui_config/client.yaml")
+    Path::new("")
 }
 
 pub async fn bridge_config(

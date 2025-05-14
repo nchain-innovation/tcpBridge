@@ -41,12 +41,13 @@ class Outpoint:
 
     @staticmethod
     def from_hexstr(outpoint: str):
-        prev_tx = outpoint[:64]
-        prev_index = int.from_bytes(bytes.fromhex(outpoint[64:]), "little")
-        return Outpoint(prev_tx, prev_index)
+        return Outpoint(
+            outpoint.split(":")[0],
+            int.from_bytes(bytes.fromhex(outpoint.split(":")[1]), "little")
+            )
     
     def to_hexstr(self) -> str:
-        return f"{self.prev_tx}" + self.prev_index.to_bytes(4, 'little').hex()
+        return f"{self.prev_tx}:{self.prev_index.to_bytes(4, 'little').hex()}"
     
     def __repr__(self):
         return f"prev_tx: {self.prev_tx}, prev_index: {self.prev_index}"
@@ -216,7 +217,6 @@ class WalletManager:
 
         with open(wallet_path, 'w') as file:
             json.dump(data, file, indent=4)
-        print(f"Wallet successfully saved to {wallet_path}")
 
         return
 

@@ -1,12 +1,12 @@
-proof_name = "proof_c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+proof_name = "proof_6633c2e216d20107f523a4be91b2020fb5938c9ed909d5007f21af039bc92c3b"
 
 [chain_parameters]
 input_index = 1
 output_index = 0
 
 [public_inputs]
-outpoint_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
-genesis_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+outpoint_txid = "6633c2e216d20107f523a4be91b2020fb5938c9ed909d5007f21af039bc92c3b"
+genesis_txid = "6633c2e216d20107f523a4be91b2020fb5938c9ed909d5007f21af039bc92c3b"
 
 [witness]
 tx = ""

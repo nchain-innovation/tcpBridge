@@ -10,7 +10,7 @@ It contains:
 
 ## Requirements
 
-The repository requires Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86) [Sui](https://docs.sui.io/guides/developer/getting-started).
+The repository requires Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86), and [Sui](https://docs.sui.io/guides/developer/getting-started).
 
 ## Getting started
 
@@ -28,6 +28,7 @@ pip install -r requirements.txt
 ### ZK engine setup
 
 To setup the zk engine, i.e., generating proving and verification keys, execute the following commands.
+The repository already contains example setup files required for the `setup` command.
 
 ```
 cd zk_engine
@@ -38,6 +39,9 @@ See also [zk_engine](./docs/zk_engine.md).
 
 ### Publish Sui packages and setup sui cli
 
+> [!NOTE]
+> Before executing the following commands, ensure that your Sui client is connected to the correct network (localnet, devnet, testnet, mainnet).
+
 To publish the `blockchain_oracle` Sui package
 
 ```
@@ -46,7 +50,7 @@ sui client publish
 ```
 
 Get the Object ID of the `HeaderChain` genereted by the above command and paste it into [tcpbridge](./move/bridge/sources/tcpbridge.move#L34).
-Then, execute to publish the `tcpbridge` package.
+Then, execute the following command to publish the `tcpbridge` package.
 
 ```
 cd move/bridge
@@ -62,6 +66,7 @@ At this point, to setup the sui cli copy (without `0x`):
 - the Package ID of `tcpbridge`
 
 and paste them in [configs.rs](./cli/sui/src/configs.rs).
+Also, fill in the path [config.rs](./cli/sui/src/configs.rs#L36) with the path to your local Sui wallet.
 Then, run
 
 ```
@@ -85,16 +90,16 @@ Use the same structure as the file [`empty_wallet`](./cli/empty_wallet.json) and
 - `sui_address`: the user Sui public address
 
 > [!NOTE]
-> Remember to always leave a user with name _issuer_
+> Remember to always leave a user with name _issuer_.
 
 If you have some funding you wish to use, you can add them to the `funding_utxos` using the following format: for a UTXO given by `(txid, index)`, add the string
 
-```txid || index.to_bytes(4, "little")```
+```txid:index.to_bytes(4, "little")```
 
 where `index.to_bytes(4, "little")` means `index` as a 4-byte number in little endian.
 For example, the UTXO `(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, 1)` would be added as
 
-```aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00000000```
+```aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:01000000```
 
 > [!NOTE]
 > If you are using a `regtest` environment for BSV, you can get funding from the cli. Run the command `python3 -m python_cli setup --network setup` after having added your BSV addresses to `wallet.json`.

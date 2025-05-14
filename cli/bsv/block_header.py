@@ -62,7 +62,7 @@ class MerkleProof:
         nodes = [bytes.fromhex(node)[::-1] for node in merkle_proof_json["nodes"]]
         return MerkleProof(index, nodes)
     
-    def positions(self):
+    def positions(self) -> list[int]:
         out = []
         index = self.index
         for _ in range(len(self.nodes)):

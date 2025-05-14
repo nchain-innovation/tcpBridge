@@ -71,7 +71,8 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     print(f"\nGenerating genesis transaction...")
 
     wallet_manager.generate_genesis_for_pegin(user)
-    
+    wallet_manager.save_wallet("./wallet.json")
+
     print(f"\nGenesis transaction generated at: {wallet_manager.genesis_utxos[user][-1]}")
 
     conditional_generate_block(wallet_manager.network)
@@ -80,6 +81,7 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     print(f"\nGenerating pegout UTXO...")
 
     wallet_manager.generate_pegout(user, issuer_index, -1)
+    wallet_manager.save_wallet("./wallet.json")
     
     print(f"\nPegout UTXO generated at: {wallet_manager.pegout_utxos[user][-1]}")
 
@@ -209,6 +211,7 @@ def transfer(wallet_manager: WalletManager, sender_name: str, receiver_name: str
 
     print(f"Transferring from {sender_name} to {receiver_name}")
     wallet_manager.transfer_token(sender, receiver, token_index)
+    wallet_manager.save_wallet("./wallet.json")
     print(f"Successfully transferred token in {wallet_manager.token_utxos[receiver][-1].prev_tx}")
 
     return
@@ -218,6 +221,7 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
 
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
     wallet_manager.burn_token(user, token_index)
+    wallet_manager.save_wallet("./wallet.json")
     print(f"\nToken successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
 
     conditional_generate_block(wallet_manager.network)
