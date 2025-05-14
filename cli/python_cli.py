@@ -3,6 +3,10 @@ from pathlib import Path
 import requests
 import subprocess
 import toml
+import sys
+
+sys.path.append(str(Path(__file__).parent.parent / "zkscript_package"))
+                
 from bsv.wallet import WalletManager
 from bsv.block_header import BlockHeader, MerkleProof
 from bsv.utils import tx_from_id, setup_network_connection

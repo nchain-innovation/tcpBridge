@@ -1,13 +1,14 @@
 
-from bsv.utils import bytes_to_script, prepend_signature, tx_to_input, tx_from_id, p2pkh, spend_p2pkh, p2pkh
-from bsv.zk_utils import load_and_process_vk, generate_pob_utxo
+import sys
 import json
 from pathlib import Path
-import sys
 import subprocess
 import toml
 
-sys.path.append(Path(__file__).parent.parent.parent / "zkscript_package")
+sys.path.append(str(Path(__file__).parent.parent.parent / "zkscript_package"))
+
+from bsv.utils import bytes_to_script, prepend_signature, tx_to_input, tx_from_id, p2pkh, spend_p2pkh, p2pkh
+from bsv.zk_utils import load_and_process_vk, generate_pob_utxo
 
 from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4753
 from src.zkscript.groth16.mnt4_753.mnt4_753 import mnt4_753

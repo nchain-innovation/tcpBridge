@@ -1,4 +1,9 @@
 import argparse
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent.parent / "zkscript_package"))
+
 from bsv.wallet import WalletManager
 from bsv.utils import setup_network_connection
 
