@@ -15,6 +15,5 @@ __pycache__/
 
 # Project specific
 keys/
-data/
 proofs/
 wallet.json

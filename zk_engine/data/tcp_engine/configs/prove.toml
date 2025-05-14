@@ -1,0 +1,13 @@
+proof_name = "proof_c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+
+[chain_parameters]
+input_index = 1
+output_index = 0
+
+[public_inputs]
+outpoint_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+genesis_txid = "c20100c5f17bec70686cf389bc192c950279631e99c9f6268dfa1a32a9bb1da3"
+
+[witness]
+tx = ""
+prior_proof_path = ""
