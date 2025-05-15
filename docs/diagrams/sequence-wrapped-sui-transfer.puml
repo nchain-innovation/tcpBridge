@@ -1,0 +1,81 @@
+@startuml
+title Bridge - Transfer Wrapped Sui to User2
+hide footbox
+
+actor User1 as U1
+actor User2 as U2
+
+
+box "System" #lightblue
+    participant ZKEngine as Z
+    
+end box
+
+participant BSV
+participant Sui 
+
+
+group Transfer Sui to BSV
+    
+    U2 -> U1: Transfer_to(new_child_of_genesis)
+    activate U2
+    activate U1
+
+    U1 -> U2: Tx\n(in=[, prev_child_of_genesis], output=[new_child_of_genesis])
+    note right
+    Pre signed - anyone can pay
+    end note
+
+    group Verify Proof
+
+    
+        U1 -> U2: Proof\n(Genesis, prev_child_of_genesis, zkproof(prev_child_of_genesis))
+        deactivate U1
+
+        U2 -> Z: Verify\n(Genesis, prev_child_of_genesis, zkproof(prev_child_of_genesis))
+
+        Z --> U2: Success
+    end
+
+    group Check Wrapped Sui
+        U1 -> U2: Peg_Out_UTXO_outpoint
+
+        U2 -> BSV: Get_Tx(Peg_Out_UTXO_outpoint)
+        activate BSV
+        BSV --> U2: Peg_Out_Tx
+        deactivate BSV
+
+        U2 -> U2 : Check_Format(Peg_Out_UTXO, Genesis_UTXO)
+        note right
+        Note Check_Format is optional.
+        Based on trust of BridgeAdmin.
+        end note
+
+        U2 -> Sui: Is_Valid_Couple(Peg_Out_UTXO, Genesis_UTXO)
+        activate Sui
+        Sui --> U2: Success
+        deactivate Sui
+
+    end
+
+
+
+    U2 -> U2: Tx\n(in=[funding, prev_child_of_genesis], output=[new_child_of_genesis])
+    
+    U2 -> BSV: Publish(Tx)
+    
+
+    group Generate Proof
+
+        U2 -> Z: Generate_Proof(Tx)
+        activate Z
+        Z --> U2: ZK_Proof
+        deactivate Z
+    end
+
+    U2 -> U2: Store(ZK_Proof)
+
+end
+
+
+@enduml

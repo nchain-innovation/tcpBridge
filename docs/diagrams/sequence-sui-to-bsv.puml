@@ -23,11 +23,13 @@ group Transfer Sui to BSV
     BSV --> U: Genesis_UTXO
     deactivate BSV
 
-    U -> Z: Generate_Proof(Genesis_UTXO)
-    activate Z
-    Z --> U: ZK_Proof
-    deactivate Z
+    group Generate Proof
 
+        U -> Z: Generate_Proof(Genesis_UTXO)
+        activate Z
+        Z --> U: ZK_Proof
+        deactivate Z
+    end
 
     U -> A: Request Peg Out UTXO (Genesis_UTXO)
     activate A
@@ -44,8 +46,7 @@ group Transfer Sui to BSV
     A --> U: Success(Peg_Out_UTXO_TXID)
     deactivate A
 
-    group Check Sui
-
+    group Check Wrapped Sui
 
         U -> BSV: Request_Tx(Peg_Out_UTXO_TXID)
         activate BSV
@@ -53,7 +54,6 @@ group Transfer Sui to BSV
         deactivate BSV
 
         U -> U : Check_Format(Peg_Out_UTXO, Genesis_UTXO)
-
 
         U -> Sui: Is_Valid_Couple(Peg_Out_UTXO, Genesis_UTXO)
         activate Sui

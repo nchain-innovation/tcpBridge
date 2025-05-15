@@ -1,0 +1,77 @@
+@startuml
+title Bridge - Components
+
+
+/'
+package "System" {
+    [BridgeAdmin]
+    [ZKEngine]
+    [ZKScript package]
+    
+
+}
+
+package "Sui" {
+    [Oracle Smart Contract]
+    [Bridge Smart Contract]
+
+    object Bridge {
+        es
+
+    }
+
+}
+'/
+Package System {
+
+
+ Package ZKEngine {
+ 
+    Class ProofOfBurnEngine {
+        setup()
+        prove()
+        verify()
+    }
+
+    Class TransactionChainProofEngine {
+        setup()
+        prove()
+        verify()
+    }
+
+    
+ } 
+note right 
+Contains setup() which calls
+1) TransactionChainProofEngine.setup()
+2) ProofOfBurnEngine.setup()
+Note order is important
+end note   
+    
+    Class BridgeAdmin {
+        id: UID
+
+    }
+}
+
+Package Sui {
+    Class Oracle_SmartContract {
+        update_chain()
+        reorg_chain()
+    }
+
+    Class Bridge_SmartContract {
+        add()
+        drop_elapsed()
+        is_valid_for_pegin()
+        pegin()
+        is_valid_for_pegout()
+        pegout()
+        get_pegout()
+        get_coin_value()
+        _with_chucks()
+    }
+}
+
+
+@enduml

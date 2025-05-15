@@ -1,0 +1,60 @@
+@startuml
+title Bridge - Transfer BSV to Sui  (Unlocking Sui)
+hide footbox
+
+actor User as U
+
+
+box "System" #lightblue
+    participant BridgeAdmin as A
+    participant ZKEngine as Z
+    
+end box
+
+participant BSV
+participant Sui 
+
+
+group Transfer BSV to Sui
+    
+    activate U
+    
+    U -> U: burning_tx = Tx\n(inputs=[Child_of_genesis, Peg_Out_UTXO_outpoint, funding],\noutput=[OP_0 OP_RETURN Sui Address])
+    note right
+    Construct without unlocking script
+    end note
+
+    group Generate Proof of Burn
+
+        U -> Z: Generate_Proof(burning_tx)
+        activate Z
+        Z --> U: ZK_Proof
+        deactivate Z
+    end
+
+    U -> U: burning_tx.add_unlocking_scripts(ZK_Proof)
+
+    U -> BSV: Publish_Tx(burning_tx)
+    ...
+    BSV --> U: event_tx_mined(burning_tx, block_height)
+
+    U -> BSV: request_merkle_proof(burning_tx)
+    BSV --> U: merkle_proof
+
+    U -> Sui: Peg_out(Genesis_UTXO_outpoint, burning_tx,merkle_proof, block_height)
+    activate Sui
+    Sui -> Sui: Check Sui Address
+    Sui --> U: Success(wrapped_funds)
+    deactivate Sui
+    deactivate U
+
+    note right
+    From Genesis_UTXO_outpoint
+    end note
+
+
+end
+
+
+
+@enduml

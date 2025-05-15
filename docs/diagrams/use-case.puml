@@ -2,7 +2,9 @@
 title Sui Bridge
 left to right direction
 
-actor User as U
+actor User1 as U
+actor User2 as U2
+
 
 actor Admin as A
 
@@ -12,9 +14,14 @@ cloud BSV
 
 package "Bridge System" {
 
-    (Transfer Sui -> BSV) 
-    (Transfer BSV -> Sui)
+    '(Wrap Sui on BSV) 
+    '(Unwrap Sui )
     
+    (Transfer Sui -> BSV) 
+    (Transfer BSV -> Sui) 
+
+    (Transfer Wrapped Sui) 
+
     (Upload Bridge Smart Contract) ..> Sui
     (Upload Oracle Smart Contract) ..> Sui
 
@@ -33,6 +40,9 @@ U --> (Transfer BSV -> Sui)
 (Transfer Sui -> BSV) ..> Sui
 (Transfer BSV -> Sui) ..> Sui
 
+U --> (Transfer Wrapped Sui) 
+U2 --> (Transfer Wrapped Sui) 
+(Transfer Wrapped Sui)  ..> BSV
 
 A --> (Upload Bridge Smart Contract)
 A --> (Upload Oracle Smart Contract)
