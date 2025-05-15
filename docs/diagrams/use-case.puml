@@ -1,0 +1,53 @@
+@startuml
+title Sui Bridge
+left to right direction
+
+actor User1 as U
+actor User2 as U2
+
+
+actor Admin as A
+
+cloud Sui
+cloud BSV
+
+
+package "Bridge System" {
+
+    '(Wrap Sui on BSV) 
+    '(Unwrap Sui )
+    
+    (Transfer Sui -> BSV) 
+    (Transfer BSV -> Sui) 
+
+    (Transfer Wrapped Sui) 
+
+    (Upload Bridge Smart Contract) ..> Sui
+    (Upload Oracle Smart Contract) ..> Sui
+
+    (Setup ZKEngine)
+
+}
+
+
+
+U --> (Transfer Sui -> BSV)
+U --> (Transfer BSV -> Sui)
+
+(Transfer Sui -> BSV) ..> BSV
+(Transfer BSV -> Sui) ..> BSV
+
+(Transfer Sui -> BSV) ..> Sui
+(Transfer BSV -> Sui) ..> Sui
+
+U --> (Transfer Wrapped Sui) 
+U2 --> (Transfer Wrapped Sui) 
+(Transfer Wrapped Sui)  ..> BSV
+
+A --> (Upload Bridge Smart Contract)
+A --> (Upload Oracle Smart Contract)
+A --> (Setup ZKEngine)
+
+
+
+@enduml

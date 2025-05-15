@@ -29,3 +29,15 @@ The package has two public entry functions:
 
 - [update_chain](../move/oracle/sources/blockchain_oracle.move#L105): this function can be used to update the chain. It takes two arguments: the header chain to be updated, and the byte serialisation of the block to be added. If the block is valid, then the header chain will be updated. Otherwise, nothing happens. This function can be called via the sui cli [sui](../cli/sui/), see [sui_docs](../docs/sui.md). 
 - [reorg_chain](../move/oracle/sources/blockchain_oracle.move#L123): this function can be used to reorganise the header chain after a fork. It takes three arguments: the header chain to be updated, the fork index, and the serilisations of the blocks to be added, which are passed as a list of byte serialisations. The fork index is the index at which the fork happended (e.g., if the chain forked at block `N`, then you would submit `N` as the fork index argument).
+
+## Updating the oracle
+
+To update the oracle you can use the script [oracle_service.py](../cli/bsv/oracle_service.py).
+The command syntax is:
+
+```
+python3 -m oracle_service --block_height <BLOCK_HEIGHT> --network <NETWORK>
+```
+
+where `<BLOCK_HEIGHT>` is the block height from which you want to update the oracle from.
+The script will add all the blocks from `<BLOCK_HEIGHT>` to the current blockchain tip to the oracle.

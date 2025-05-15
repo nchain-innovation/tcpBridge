@@ -14,7 +14,12 @@ This is because to validate a peg out request the bridge checks the SPV for a tr
 To ensure that the users submit a specific instance of `HeaderChain`, we hard-code its Object ID when publishing the `tcpbridge` package.
 
 To publish the [`blockchain_oracle`](../move/oracle/) package, follow the instructions in [docs/blockchain_oracle](./blockchain_oracle.md).
-Then, copy the Object ID of the `HeaderChain` that you created, paste it in [tcpbridge.move](../move/bridge/sources/tcpbridge.move#L34), and then publish the package with
+Then, copy the Object ID of the `HeaderChain` that you created, and paste it in [tcpbridge.move](../move/bridge/sources/tcpbridge.move#L34).
+
+Before publishing, you need to choose the configuration parameters of the bridge, they are:
+- [`COIN_VALUE`](./move/bridge/sources/backed_pool.move#L21): the minimum amount require to peg in with
+- [`MIN_PEGOUT_DELAY`](./move/bridge/sources/backed_pool.move#L22): the minimum number of blocks that have to be mined on top of the block containing the burning transaction before the peg out can be executed.
+- [`N_CHUNKS_BURNING_TX`](./move/bridge/sources/backed_pool.move#L23): the number of chunks the burning transaction is split into for storage on the Sui blockchain. See also [With Chunks](#with-chunks).
 
 ```
 sui client publish

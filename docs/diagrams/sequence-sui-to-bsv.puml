@@ -1,0 +1,81 @@
+@startuml
+title Bridge - Transfer Sui to BSV
+hide footbox
+
+actor User as U
+
+
+box "System" #lightblue
+    participant BridgeAdmin as A
+    participant ZKEngine as Z
+    
+end box
+
+participant BSV
+participant Sui 
+
+
+group Transfer Sui to BSV
+    
+    U -> BSV: Generate Genesis_UTXO
+    activate U
+    activate BSV
+    BSV --> U: Genesis_UTXO
+    deactivate BSV
+
+    group Generate Proof
+
+        U -> Z: Generate_Proof(Genesis_UTXO)
+        activate Z
+        Z --> U: ZK_Proof
+        deactivate Z
+    end
+
+    U -> A: Request Peg Out UTXO (Genesis_UTXO)
+    activate A
+    A -> BSV: Generate Peg_Out_UTXO
+    activate BSV
+    BSV --> A: Peg_Out_UTXO
+    deactivate BSV
+    
+    A -> Sui: BridgeSC(Peg_Out_UTXO, Genesis_UTXO)
+    activate Sui
+    Sui --> A: Success
+    deactivate Sui
+    
+    A --> U: Success(Peg_Out_UTXO_TXID)
+    deactivate A
+
+    group Check Wrapped Sui
+
+        U -> BSV: Request_Tx(Peg_Out_UTXO_TXID)
+        activate BSV
+        BSV --> U: Peg_Out_UTXO
+        deactivate BSV
+
+        U -> U : Check_Format(Peg_Out_UTXO, Genesis_UTXO)
+
+        U -> Sui: Is_Valid_Couple(Peg_Out_UTXO, Genesis_UTXO)
+        activate Sui
+        Sui --> U: Success
+        deactivate Sui
+
+    end
+
+    U -> Sui: Peg_In(Funds, Genesis_UTXO, Peg_Out_UTXO)
+    activate Sui
+    
+    note right
+    Funds held in Sui are now 
+    in BSV Genesis_UTXO
+    end note
+
+    Sui --> U: Success
+    deactivate Sui
+    deactivate U
+    
+end
+
+
+
+@enduml

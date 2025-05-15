@@ -279,7 +279,14 @@ pub(crate) async fn pegout(client: SuiClient, pegout: Pegout) -> Result<(), anyh
 
     let header_chain_obj = builder.obj(header_chain_arg)?;
 
-    let merkle_proof_position = builder.pure(pegout.merkle_proof.positions.iter().map(|el| *el == 1).collect::<Vec<bool>>())?;
+    let merkle_proof_position = builder.pure(
+        pegout
+            .merkle_proof
+            .positions
+            .iter()
+            .map(|el| *el == 1)
+            .collect::<Vec<bool>>(),
+    )?;
     let merkle_proof_hashes = builder.pure(
         pegout
             .merkle_proof
@@ -509,7 +516,14 @@ pub(crate) async fn pegout_with_chunks(
 
     let header_chain_obj = builder.obj(header_chain_arg)?;
 
-    let merkle_proof_position = builder.pure(pegout.merkle_proof.positions.iter().map(|el| *el == 1).collect::<Vec<bool>>())?;
+    let merkle_proof_position = builder.pure(
+        pegout
+            .merkle_proof
+            .positions
+            .iter()
+            .map(|el| *el == 1)
+            .collect::<Vec<bool>>(),
+    )?;
     let merkle_proof_hashes = builder.pure(
         pegout
             .merkle_proof

@@ -62,6 +62,10 @@ sui client publish
 Get the Object ID of the `HeaderChain` genereted by the above command and paste it into [tcpbridge](./move/bridge/sources/tcpbridge.move#L34).
 Then, execute the following command to publish the `tcpbridge` package.
 
+> [!NOTE]
+> The bridge depends on a few configuration parameters: [`COIN_VALUE`](./move/bridge/sources/backed_pool.move#L21), [`MIN_PEGOUT_DELAY`](./move/bridge/sources/backed_pool.move#L22), [`N_CHUNKS_BURNING_TX`](./move/bridge/sources/backed_pool.move#L23). They are set up to `10`, `0`, and `4` respectively. See [docs/tcpbridge](./docs/tcpbridge.md) for their meaning in case you want to change them.
+
+
 ```
 cd move/bridge
 sui client publish
@@ -135,3 +139,8 @@ python3 -m python_cli setup --network <NETWORK>
 
 You are now ready to use the bridge.
 For the avaiable commands, see [python_cli](./docs/python_cli.md).
+
+## License
+
+The code is released under the attached [LICENSE](./LICENSE.txt). If you would like to use it for commercial purposes, please contact <research.enquiries@nchain.com>.
+

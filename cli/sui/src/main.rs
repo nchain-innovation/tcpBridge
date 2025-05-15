@@ -35,7 +35,7 @@ fn get_config_files_path() -> String {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let cli = cli::Cli::parse();
-    
+
     let localnet_client = SuiClientBuilder::default().build_localnet().await?;
     //let devnet_client = SuiClientBuilder::default().build_devnet().await?;
     //let testnet_client = SuiClientBuilder::default().build_testnet().await?;
@@ -51,11 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 toml::from_str::<BlockHeaderSerialisation>(&std::fs::read_to_string(format!(
                     "{config_file_path_as_str}/{CONFIG_PATH_UPDATE_CHAIN}"
                 ))?)?;
-            oracle_cli::update_chain(
-                client,
-                hex::decode(block_header_serialisation.ser)?,
-            )
-            .await?;
+            oracle_cli::update_chain(client, hex::decode(block_header_serialisation.ser)?).await?;
         }
         cli::Commands::AddBridgeEntry => {
             println!(
