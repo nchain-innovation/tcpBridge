@@ -1,5 +1,5 @@
 @startuml
-title Bridge - Transfer SUI to BSV
+title Bridge - Transfer Sui to BSV
 hide footbox
 
 actor User as U
@@ -12,10 +12,10 @@ box "System" #lightblue
 end box
 
 participant BSV
-participant SUI 
+participant Sui 
 
 
-group Transfer SUI to BSV
+group Transfer Sui to BSV
     
     U -> BSV: Generate Genesis_UTXO
     activate U
@@ -36,15 +36,15 @@ group Transfer SUI to BSV
     BSV --> A: Peg_Out_UTXO
     deactivate BSV
     
-    A -> SUI: BridgeSC(Peg_Out_UTXO, Genesis_UTXO)
-    activate SUI
-    SUI --> A: Success
-    deactivate SUI
+    A -> Sui: BridgeSC(Peg_Out_UTXO, Genesis_UTXO)
+    activate Sui
+    Sui --> A: Success
+    deactivate Sui
     
     A --> U: Success(Peg_Out_UTXO_TXID)
     deactivate A
 
-    group Check SUI
+    group Check Sui
 
 
         U -> BSV: Request_Tx(Peg_Out_UTXO_TXID)
@@ -55,23 +55,23 @@ group Transfer SUI to BSV
         U -> U : Check_Format(Peg_Out_UTXO, Genesis_UTXO)
 
 
-        U -> SUI: Is_Valid_Couple(Peg_Out_UTXO, Genesis_UTXO)
-        activate SUI
-        SUI --> U: Success
-        deactivate SUI
+        U -> Sui: Is_Valid_Couple(Peg_Out_UTXO, Genesis_UTXO)
+        activate Sui
+        Sui --> U: Success
+        deactivate Sui
 
     end
 
-    U -> SUI: Peg_In(Funds, Genesis_UTXO, Peg_Out_UTXO)
-    activate SUI
+    U -> Sui: Peg_In(Funds, Genesis_UTXO, Peg_Out_UTXO)
+    activate Sui
     
     note right
-    Funds held in SUI are now 
+    Funds held in Sui are now 
     in BSV Genesis_UTXO
     end note
 
-    SUI --> U: Success
-    deactivate SUI
+    Sui --> U: Success
+    deactivate Sui
     deactivate U
     
 end

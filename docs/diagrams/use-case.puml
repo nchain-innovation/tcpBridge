@@ -1,22 +1,22 @@
 @startuml
-title SUI Bridge
+title Sui Bridge
 left to right direction
 
 actor User as U
 
 actor Admin as A
 
-cloud SUI
+cloud Sui
 cloud BSV
 
 
 package "Bridge System" {
 
-    (Transfer SUI -> BSV) 
-    (Transfer BSV -> SUI)
+    (Transfer Sui -> BSV) 
+    (Transfer BSV -> Sui)
     
-    (Upload Bridge Smart Contract) ..> SUI
-    (Upload Oracle Smart Contract) ..> SUI
+    (Upload Bridge Smart Contract) ..> Sui
+    (Upload Oracle Smart Contract) ..> Sui
 
     (Setup ZKEngine)
 
@@ -24,14 +24,14 @@ package "Bridge System" {
 
 
 
-U --> (Transfer SUI -> BSV)
-U --> (Transfer BSV -> SUI)
+U --> (Transfer Sui -> BSV)
+U --> (Transfer BSV -> Sui)
 
-(Transfer SUI -> BSV) ..> BSV
-(Transfer BSV -> SUI) ..> BSV
+(Transfer Sui -> BSV) ..> BSV
+(Transfer BSV -> Sui) ..> BSV
 
-(Transfer SUI -> BSV) ..> SUI
-(Transfer BSV -> SUI) ..> SUI
+(Transfer Sui -> BSV) ..> Sui
+(Transfer BSV -> Sui) ..> Sui
 
 
 A --> (Upload Bridge Smart Contract)
