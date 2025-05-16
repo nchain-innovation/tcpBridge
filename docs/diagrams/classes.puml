@@ -1,0 +1,77 @@
+@startuml
+title Bridge - Classes
+
+
+Package System {
+
+Class Combined_Wallet {
+    bsv_wallet: BSV_Wallet
+    sui_wallet: SUI_Wallet 
+
+    setup()
+    pegin()
+    burn()
+    pegout()
+    transfer()
+ }
+  
+
+
+ Package ZKEngine {
+ 
+    Class ProofOfBurnEngine {
+        setup()
+        prove()
+        verify()
+    }
+
+    Class TransactionChainProofEngine {
+        setup()
+        prove()
+        verify()
+    }
+
+    
+} 
+note left 
+ZKEngine contains setup() which calls
+1) TransactionChainProofEngine.setup()
+2) ProofOfBurnEngine.setup()
+Note order is important
+end note   
+    
+    Class BridgeAdmin {
+        id: UID
+
+    }
+
+
+    Package Sui_Smart_Contracts {
+        Class Oracle {
+            update_chain()
+            reorg_chain()
+        }
+
+        Class Bridge {
+            add()
+            drop_elapsed()
+            is_valid_for_pegin()
+            pegin()
+            is_valid_for_pegout()
+            pegout()
+            get_pegout()
+            get_coin_value()
+            _with_chucks()
+        }
+    }
+
+}
+
+Combined_Wallet ..> ProofOfBurnEngine: uses
+Combined_Wallet ..> TransactionChainProofEngine: uses
+
+Combined_Wallet ..> Bridge: uses
+Combined_Wallet ..> BridgeAdmin: uses
+Bridge ..> Oracle: uses
+
+@enduml

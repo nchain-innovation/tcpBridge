@@ -46,3 +46,10 @@ This diagram shows the interactions required to Unlock Sui.
 
 This currently takes a BSV tx of 330K, however Sui currently is limited to objects of 256K.
 
+
+## System Classes
+
+This diagram shows the classes used by the project.
+
+
+![Classes](diagrams/classes.png)
