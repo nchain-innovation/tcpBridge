@@ -1,4 +1,3 @@
 [submodule "zkscript_package"]
 	path = zkscript_package
 	url = https://github.com/nchain-innovation/zkscript_package.git
-	branch = perf/implement-reftx-61
