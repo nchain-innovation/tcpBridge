@@ -1,0 +1,12 @@
+# This is for writing utility functions that connect to the running instance of wild bit lab
+
+[bsv_client]
+# For ms-node
+# type = "insandbox"
+user = "bitcoin"
+password = "bitcoin"
+interface_type = "rpc"
+network_type = "testnet"
+type= "testnet"
+address = "localhost:18332"
+ 

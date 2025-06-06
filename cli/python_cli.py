@@ -220,6 +220,10 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
     user = map_user_to_index(user_name, wallet_manager)
 
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
+
+    #Avoid edge cases for merkle proof where the Merkle tree is not balanced.
+    conditional_generate_block(wallet_manager.network)
+
     wallet_manager.burn_token(user, token_index)
     wallet_manager.save_wallet("./wallet.json")
     print(f"\nToken successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
