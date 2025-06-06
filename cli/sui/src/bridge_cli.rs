@@ -442,31 +442,26 @@ pub(crate) async fn pegout_with_chunks(
     let active_address = wallet.active_address()?;
 
     // Create chunks
-    // burning_tx is ~ 330, we split it in four chunks: 100KB, 100KB, 100KB, remaining (max tx size is 128KB)
-    // and then we split the chunks into parts of 10KB (16KB is max pure argument size)
+    // burning_tx is ~ 130, we split it in four chunks: 40KB, 40KB, 40KB, remaining (max tx size is 128KB)
+    // and then we split the chunks into parts of 4KB (16KB is max pure argument size)
     let burning_tx_bytes = hex::decode(pegout.burning_tx)?;
-    let burning_tx_len = burning_tx_bytes.len();
-    // Safety check
-    assert!(burning_tx_len >= 320000);
-
+    let chunck_size = 40000;
+    let argument_size = 4000;
     let mut burning_tx_chunks: Vec<Vec<Vec<u8>>> = vec![];
     for i in 0..3 {
         let mut chunks_to_add: Vec<Vec<u8>> = vec![];
         for j in 0..10 {
             chunks_to_add.push(
-                burning_tx_bytes[100000 * i + 10000 * j..100000 * i + 10000 * (j + 1)].to_vec(),
+                burning_tx_bytes[chunck_size * i + argument_size * j..chunck_size * i + argument_size * (j + 1)].to_vec(),
             );
         }
         burning_tx_chunks.push(chunks_to_add);
     }
     let mut last_chunk: Vec<Vec<u8>> = vec![];
-    last_chunk.push(burning_tx_bytes[300000..310000].to_vec());
-    last_chunk.push(burning_tx_bytes[310000..320000].to_vec());
-    if burning_tx_len >= 330000 {
-        last_chunk.push(burning_tx_bytes[320000..330000].to_vec());
-    } else {
-        last_chunk.push(burning_tx_bytes[320000..].to_vec());
-    }
+    last_chunk.push(burning_tx_bytes[3*chunck_size..3*chunck_size + argument_size].to_vec());
+    last_chunk.push(burning_tx_bytes[3*chunck_size + argument_size..3*chunck_size + 2*argument_size].to_vec());
+    last_chunk.push(burning_tx_bytes[3*chunck_size + 2*argument_size..].to_vec());
+
     for _i in 0..7 {
         last_chunk.push(vec![]);
     }

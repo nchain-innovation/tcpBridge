@@ -150,7 +150,7 @@ def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_inde
         "burning_tx" : burning_tx.serialize().hex(),
         "block_height" : block_height,
         "merkle_proof" : {
-            "positions" : [True if position else False for position in merkle_proof.positions()],
+            "positions" : merkle_proof.positions(),
             "hashes" : [node.hex() for node in merkle_proof.nodes],
         }
     }

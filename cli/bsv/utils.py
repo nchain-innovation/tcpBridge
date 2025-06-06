@@ -18,7 +18,7 @@ def setup_network_connection(network):
             'user': 'bitcoin',
             'password': 'bitcoin',
             'network_type': 'testnet',
-            'address': '127.0.0.1:18332',
+            'address': 'localhost:18332',
             'broadcast_tx': True}
         )
     return InterfaceFactory().set_config({"interface_type": "woc", "network_type": network})
