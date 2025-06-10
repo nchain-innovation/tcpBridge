@@ -10,6 +10,7 @@ sys.path.append(str(Path(__file__).parent.parent / "zkscript_package"))
 from bsv.wallet import WalletManager
 from bsv.block_header import BlockHeader, MerkleProof
 from bsv.utils import tx_from_id, setup_network_connection
+from demo_setup import run_sui_command
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 
 # TCP
@@ -221,15 +222,29 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
 
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
 
-    #Avoid edge cases for merkle proof where the Merkle tree is not balanced.
-    conditional_generate_block(wallet_manager.network)
+    sui_address = wallet_manager.sui_addresses[user]
+    extended_address = bytes.fromhex("00") * (32 - len(sui_address)) + sui_address
+    extended_address = "0x" + extended_address.hex()
+    run_sui_command(["client", "switch", "--address", f"{extended_address}"])
+    run_sui_command(["client", "faucet"])
 
     wallet_manager.burn_token(user, token_index)
     wallet_manager.save_wallet("./wallet.json")
-    print(f"\nToken successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
 
     conditional_generate_block(wallet_manager.network)
+    blockhash = wallet_manager.network.get_best_block_hash()
+    blockheader = wallet_manager.network.get_block_header(blockhash)
+    blockheight = blockheader.get("height")
 
+    print(f"\nToken successfully burned at transaction {wallet_manager.burnt_tokens[user][-1].burning_txid} \nblock height {blockheight} \nblock hash {blockhash}")
+
+    return
+
+def update_oracle(genesis_height: int, network: str):
+    subprocess.run(
+        ["python3", "-m", "oracle_service", "--block_height", f"{genesis_height}", "--network", network],
+        cwd="./bsv"
+    )
     return
 
 def main():
@@ -267,6 +282,11 @@ def main():
     burn_parser.add_argument("--token-index", type=int, required=True, help="The token index")
     burn_parser.add_argument("--network", type=str, required=True, help="The network")
 
+    # Update command
+    update_parser = subparsers.add_parser("update", help="Execute the update oracle command")
+    update_parser.add_argument("--genesis_height", type=int, required=True, help="The genesis block height in Oracle contract")
+    update_parser.add_argument("--network", type=str, required=True, help="The network")
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -292,6 +312,8 @@ def main():
         transfer(wallet_manager, args.sender, args.receiver, args.token_index)
     elif args.command == "burn":
         burn(wallet_manager, args.user, args.token_index)
+    elif args.command == "update":
+        update_oracle(args.genesis_height, args.network)
 
     wallet_manager.save_wallet("./wallet.json")
 

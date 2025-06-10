@@ -212,7 +212,7 @@ def main ():
     blockheader = BlockHeader.get(blockhash, bsv_client)
     richBlockHeader = bsv_client.get_block_header(blockhash)
 
-    print("\nPublishing Oracle contract...")
+    print(f"\nPublishing Oracle contract with genesis height {richBlockHeader.get("height")}...")
 
     generate_oracle_contract_from_template(
         template_file = "blockchain_oracle_temp.move",
