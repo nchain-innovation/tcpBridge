@@ -10,7 +10,6 @@ sys.path.append(str(Path(__file__).parent.parent / "zkscript_package"))
 from bsv.wallet import WalletManager
 from bsv.block_header import BlockHeader, MerkleProof
 from bsv.utils import tx_from_id, setup_network_connection
-from demo_setup import run_sui_command
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 
 # TCP
@@ -44,6 +43,27 @@ def conditional_generate_block(network: WoCInterface | RPCInterface):
             except:
                 pass
     return
+
+def run_sui_command(command_args, working_dir=None):
+    try:
+        # Run the command and capture output
+        result = subprocess.run(
+            ["sui"] + command_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,    
+            text=True,
+            check=True,
+            cwd=working_dir
+        )
+        # Print and return outputs
+        #print("\nCommand Output:\n" + result.stdout)
+        #if result.stderr:
+        #    print("Errors:\n" + result.stderr)   
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error {e.returncode}:")
+        print(e.stderr)
+        return None
 
 def setup(wallet_manager: WalletManager):
     if isinstance(wallet_manager.network, RPCInterface):
@@ -99,7 +119,11 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     }
     with open(str(Path(__file__).parent / "sui/config_files/config_add_bridge_entry.toml"), "w") as file:
         toml.dump(data, file)
-    
+
+    #switch to admin to add bridge entry. This address should be the same as the address that is used to publish the bridge contract
+    admin_sui_address = get_sui_address(wallet_manager, "issuer")
+    run_sui_command(["client", "switch", "--address", f"{admin_sui_address}"])
+
     # Add bridge entry
     subprocess.run(
             f"cd {Path(__file__).parent / "sui"} && {ADD_BRIDGE_ENTRY_COMMAND}",
@@ -122,6 +146,9 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     }
     with open(str(Path(__file__).parent / "sui/config_files/config_pegin.toml"), "w") as file:
         toml.dump(data, file)
+
+    user_sui_address = get_sui_address(wallet_manager, user_name)
+    run_sui_command(["client", "switch", "--address", f"{user_sui_address}"])
 
     # Pegin
     subprocess.run(
@@ -222,12 +249,6 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
 
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
 
-    sui_address = wallet_manager.sui_addresses[user]
-    extended_address = bytes.fromhex("00") * (32 - len(sui_address)) + sui_address
-    extended_address = "0x" + extended_address.hex()
-    run_sui_command(["client", "switch", "--address", f"{extended_address}"])
-    run_sui_command(["client", "faucet"])
-
     wallet_manager.burn_token(user, token_index)
     wallet_manager.save_wallet("./wallet.json")
 
@@ -246,6 +267,13 @@ def update_oracle(genesis_height: int, network: str):
         cwd="./bsv"
     )
     return
+
+def get_sui_address(wallet_manager: WalletManager, user_name: str):
+    user = map_user_to_index(user_name, wallet_manager)
+    sui_address = wallet_manager.sui_addresses[user]
+    extended_address = bytes.fromhex("00") * (32 - len(sui_address)) + sui_address
+    extended_address = "0x" + extended_address.hex()
+    return extended_address
 
 def main():
     parser = argparse.ArgumentParser(description="CLI for tcpBridge")
@@ -302,6 +330,8 @@ def main():
     elif args.command == "pegin":
         pegin(wallet_manager, args.user, args.pegin_amount)
     elif args.command == "pegout":
+        sui_address = get_sui_address(wallet_manager, args.user)
+        run_sui_command(["client", "switch", "--address", f"{sui_address}"])
         if args.network == "regtest":
             assert args.blockhash is not None, "Pegout for regtest requires blockhash"
             assert args.block_height is not None, "Pegout for regtest requires block height"

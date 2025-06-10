@@ -1,4 +1,4 @@
-# This is for writing utility functions that connect to the running instance of wild bit lab
+# This is for Bitcoin SV regtest using wild bit lab (https://github.com/nchain-innovation/wild-bit-lab)
 
 [bsv_client]
 # For ms-node
