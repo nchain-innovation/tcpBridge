@@ -148,7 +148,7 @@ For the avaiable commands, see [python_cli](./docs/python_cli.md).
 
 If you are running a Regtest, then you can benefit from the auomated setup for a demo. Assuming that you have done [ZK engine setup](#zk-engine-setup) and have Sui client running, just follow the steps below.
 
-1. Locate bitcoin.conf for your regest and update [bsv_config.toml](./cli/bsv_config.toml) accordingly. 
+1. Locate bitcoin.conf for your regest and update [bsv_config.toml](./cli/bsv_config.toml) to make sure that the port number is the same as rpcport. If you are using [wild bit lab](https://github.com/nchain-innovation/wild-bit-lab), then it is under ```./wild-bit-lab/data/```
 
 2. Add the following line to bitcoin.conf if they do not exist.
     ```
@@ -165,17 +165,13 @@ If you are running a Regtest, then you can benefit from the auomated setup for a
 5. Now you can use python.cli to do pegin, transfer, burn, update Oracle contract, and pegout. For examples:
     ```
     python -m python_cli pegin --user alice --pegin-amount 128000000000 --network regtest
-    ```
-    ```
+
     python -m python_cli transfer --sender alice --receiver bob --token-index 0 --network regtest
-    ```
-    ```
+
     python -m python_cli burn --user bob --token-index 0 --network regtest     
-    ```
-    ```
+
     python -m oracle_service --block_height {genesis block height} --network regtest
-    ```
-    ```
+
     python -m python_cli pegout --user bob --token-index 0 --network regtest --blockhash {blockhash of burning tx} --block_height {block height of burning tx}
     ```
     {genesis block height} can be obtained from the output after publishing the Oracle contract in Step 4.
