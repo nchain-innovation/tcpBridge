@@ -1,0 +1,12 @@
+# This is for Bitcoin SV regtest using wild bit lab (https://github.com/nchain-innovation/wild-bit-lab)
+
+[bsv_client]
+# For ms-node
+# type = "insandbox"
+user = "bitcoin"
+password = "bitcoin"
+interface_type = "rpc"
+network_type = "testnet"
+type= "testnet"
+address = "localhost:18332"
+ 

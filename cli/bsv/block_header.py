@@ -44,7 +44,24 @@ class MerkleProof:
         self.nodes = nodes
         
     def __repr__(self):
-        return f"MerkleProof(\nindex={self.index},\nnodes=[{"".join([f"\n\t{node.hex()}," for node in self.nodes])}\n])"
+        return f"MerkleProof(\nindex={self.index},\nnodes=[{"".join([f"\n\t{node.hex()}," if node != '*' else '*,' for node in self.nodes])}\n])"
+
+    #This requires compatible implementation of SPV in smart contracts to handle abbreviation of duplicated nodes in a Merkle tree.
+    @staticmethod
+    def get_optimised_merkle_proof(block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface):
+        if isinstance(connection, WoCInterface):
+            merkle_proof_json = connection.get_merkle_proof(block_hash, tx_id)[0]
+        else:
+            payload = {
+                        "method": "getmerkleproof2",
+                        "params": [block_hash, tx_id],
+                        "jsonrpc": "2.0",
+                        "id": 1
+            }
+            merkle_proof_json = requests.post("http://" + connection.address, json=payload, auth=(connection.user, connection.password)).json()["result"]
+        index = merkle_proof_json["index"]
+        nodes = [bytes.fromhex(node)[::-1] if node != '*' else '*' for node in merkle_proof_json["nodes"]]
+        return MerkleProof(index, nodes)
     
     @staticmethod
     def get_merkle_proof(block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface):
@@ -59,7 +76,14 @@ class MerkleProof:
             }
             merkle_proof_json = requests.post("http://" + connection.address, json=payload, auth=(connection.user, connection.password)).json()["result"]
         index = merkle_proof_json["index"]
-        nodes = [bytes.fromhex(node)[::-1] for node in merkle_proof_json["nodes"]]
+        nodes = []
+        hash = bytes.fromhex(tx_id)[::-1]
+        for node in merkle_proof_json["nodes"]:
+            if node == '*':
+                nodes.append(hash)
+                hash = hash256d(hash+hash)
+            else:
+                nodes.append(bytes.fromhex(node)[::-1])
         return MerkleProof(index, nodes)
     
     def positions(self) -> list[int]:

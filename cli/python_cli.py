@@ -44,6 +44,27 @@ def conditional_generate_block(network: WoCInterface | RPCInterface):
                 pass
     return
 
+def run_sui_command(command_args, working_dir=None):
+    try:
+        # Run the command and capture output
+        result = subprocess.run(
+            ["sui"] + command_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,    
+            text=True,
+            check=True,
+            cwd=working_dir
+        )
+        # Print and return outputs
+        #print("\nCommand Output:\n" + result.stdout)
+        #if result.stderr:
+        #    print("Errors:\n" + result.stderr)   
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error {e.returncode}:")
+        print(e.stderr)
+        return None
+
 def setup(wallet_manager: WalletManager):
     if isinstance(wallet_manager.network, RPCInterface):
         # Get funding
@@ -98,7 +119,11 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     }
     with open(str(Path(__file__).parent / "sui/config_files/config_add_bridge_entry.toml"), "w") as file:
         toml.dump(data, file)
-    
+
+    #switch to admin to add bridge entry. This address should be the same as the address that is used to publish the bridge contract
+    admin_sui_address = get_sui_address(wallet_manager, "issuer")
+    run_sui_command(["client", "switch", "--address", f"{admin_sui_address}"])
+
     # Add bridge entry
     subprocess.run(
             f"cd {Path(__file__).parent / "sui"} && {ADD_BRIDGE_ENTRY_COMMAND}",
@@ -121,6 +146,9 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     }
     with open(str(Path(__file__).parent / "sui/config_files/config_pegin.toml"), "w") as file:
         toml.dump(data, file)
+
+    user_sui_address = get_sui_address(wallet_manager, user_name)
+    run_sui_command(["client", "switch", "--address", f"{user_sui_address}"])
 
     # Pegin
     subprocess.run(
@@ -150,7 +178,7 @@ def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_inde
         "burning_tx" : burning_tx.serialize().hex(),
         "block_height" : block_height,
         "merkle_proof" : {
-            "positions" : [True if position else False for position in merkle_proof.positions()],
+            "positions" : merkle_proof.positions(),
             "hashes" : [node.hex() for node in merkle_proof.nodes],
         }
     }
@@ -220,13 +248,32 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
     user = map_user_to_index(user_name, wallet_manager)
 
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
+
     wallet_manager.burn_token(user, token_index)
     wallet_manager.save_wallet("./wallet.json")
-    print(f"\nToken successfully burn at {wallet_manager.burnt_tokens[user][-1].burning_txid}")
 
     conditional_generate_block(wallet_manager.network)
+    blockhash = wallet_manager.network.get_best_block_hash()
+    blockheader = wallet_manager.network.get_block_header(blockhash)
+    blockheight = blockheader.get("height")
+
+    print(f"\nToken successfully burned at transaction {wallet_manager.burnt_tokens[user][-1].burning_txid} \nblock height {blockheight} \nblock hash {blockhash}")
 
     return
+
+def update_oracle(genesis_height: int, network: str):
+    subprocess.run(
+        ["python3", "-m", "oracle_service", "--block_height", f"{genesis_height}", "--network", network],
+        cwd="./bsv"
+    )
+    return
+
+def get_sui_address(wallet_manager: WalletManager, user_name: str):
+    user = map_user_to_index(user_name, wallet_manager)
+    sui_address = wallet_manager.sui_addresses[user]
+    extended_address = bytes.fromhex("00") * (32 - len(sui_address)) + sui_address
+    extended_address = "0x" + extended_address.hex()
+    return extended_address
 
 def main():
     parser = argparse.ArgumentParser(description="CLI for tcpBridge")
@@ -263,6 +310,11 @@ def main():
     burn_parser.add_argument("--token-index", type=int, required=True, help="The token index")
     burn_parser.add_argument("--network", type=str, required=True, help="The network")
 
+    # Update command
+    update_parser = subparsers.add_parser("update", help="Execute the update oracle command")
+    update_parser.add_argument("--genesis_height", type=int, required=True, help="The genesis block height in Oracle contract")
+    update_parser.add_argument("--network", type=str, required=True, help="The network")
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -278,6 +330,8 @@ def main():
     elif args.command == "pegin":
         pegin(wallet_manager, args.user, args.pegin_amount)
     elif args.command == "pegout":
+        sui_address = get_sui_address(wallet_manager, args.user)
+        run_sui_command(["client", "switch", "--address", f"{sui_address}"])
         if args.network == "regtest":
             assert args.blockhash is not None, "Pegout for regtest requires blockhash"
             assert args.block_height is not None, "Pegout for regtest requires block height"
@@ -288,6 +342,8 @@ def main():
         transfer(wallet_manager, args.sender, args.receiver, args.token_index)
     elif args.command == "burn":
         burn(wallet_manager, args.user, args.token_index)
+    elif args.command == "update":
+        update_oracle(args.genesis_height, args.network)
 
     wallet_manager.save_wallet("./wallet.json")
 

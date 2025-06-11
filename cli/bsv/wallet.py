@@ -508,6 +508,7 @@ class WalletManager:
             gradients_additions=prepared_proof.gradients_additions,
             inverse_miller_output=prepared_proof.inverse_miller_loop,
             gradient_precomputed_l_out=prepared_proof.gradient_gamma_abc_zero,
+            has_precomputed_gradients = False,
         )
         
         return unlock_key.to_unlocking_script(mnt4_753)

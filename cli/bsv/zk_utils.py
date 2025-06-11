@@ -50,6 +50,7 @@ def generate_pob_utxo(
             prepared_vk.gradients_minus_delta,
         ],
         sighash_flags=SIGHASH.ALL_FORKID,
+        has_precomputed_gradients=True,
     )
 
     lock = RefTx(mnt4_753).locking_script(
