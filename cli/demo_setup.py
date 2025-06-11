@@ -39,9 +39,7 @@ def extract_bridge_objects(data):
         # Extract TCPBridge object ID and version
         if "tcpbridge::Bridge" in obj.get("objectType", ""):
             results['bridge_id'] = obj.get("objectId")
-            print(f"{results['bridge_id']}")
             results['bridge_ver'] = obj.get("version")
-            print(f"{results['bridge_ver']}")
 
             
         # Extract package ID

@@ -43,7 +43,10 @@ cd zk_engine
 cargo run --release -- setup
 ```
 
-See also [docs/zk_engine](./docs/zk_engine.md).
+See also [docs/zk_engine](./docs/zk_engine.md). 
+
+If you are running Regtest, you can jump to [Quick setup with Regtest](#quick-setup-with-regtest)
+
 
 ### Publish Sui packages and setup sui cli
 
@@ -140,6 +143,57 @@ python3 -m python_cli setup --network <NETWORK>
 
 You are now ready to use the bridge.
 For the avaiable commands, see [python_cli](./docs/python_cli.md).
+
+## Quick setup with Regtest
+
+If you are running a Regtest, then you can benefit from the auomated setup for a demo. Assuming that you have done [ZK engine setup](#zk-engine-setup) and have Sui client running, just follow the steps below.
+
+1. Locate bitcoin.conf for your regest and update [bsv_config.toml](./cli/bsv_config.toml) accordingly. 
+
+2. Add the following line to bitcoin.conf if they do not exist.
+    ```
+    maxscriptsizepolicy=100000000
+    ```
+
+3. Start or restart Regtest and make sure at least 100 blocks are mined. 
+
+4. The following command will setup example wallets, publish Oracle contract, publish Bridge contract, and build a client to interact with the contracts. 
+    ```
+    cd ./cli
+    python demo_setup.py
+    ```
+5. Now you can use python.cli to do pegin, transfer, burn, update Oracle contract, and pegout. For examples:
+    ```
+    python -m python_cli pegin --user alice --pegin-amount 128000000000 --network regtest
+    ```
+    ```
+    python -m python_cli transfer --sender alice --receiver bob --token-index 0 --network regtest
+    ```
+    ```
+    python -m python_cli burn --user bob --token-index 0 --network regtest     
+    ```
+    ```
+    python -m oracle_service --block_height {genesis block height} --network regtest
+    ```
+    ```
+    python -m python_cli pegout --user bob --token-index 0 --network regtest --blockhash {blockhash of burning tx} --block_height {block height of burning tx}
+    ```
+    {genesis block height} can be obtained from the output after publishing the Oracle contract in Step 4.
+    ```
+    Publishing Oracle contract with genesis height 108...
+    ```
+    
+    {blockhash of burning tx} and {block height of burning tx} can be obtained from the output after calling "burn".
+    ```
+    Token successfully burned at transaction 8fc55be578ba5ac0c017ff17971b2334952a95483ee3f233b6d3f53c2db270d5 
+    block height 112 
+    block hash 0b552c27ce22950ceedc124b013a772274600fd0f0ab708068b403d3c79a4882
+    ```
+
+6. After "pegout", you should be able to see that the user has received 128 sui from a Sui explorer.
+
+7. You can always restart from step 4 at any time. 
+
 
 ## License
 
