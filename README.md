@@ -1,21 +1,32 @@
-# SUI - BSV bridge
+# Bridging your blockchain to Bitcoin SV
 
 > [!WARNING]
-> As of now, it is not possible to peg out from the bridge. This is because the size of the final transaction that should be submitted to Sui is above the allowed limits, see [docs/tcp_bridge](./docs/tcpbridge.md). We are working on reducing the size of the final transaction.
+> All smart contracts provided in this repo is for research, experiments and demostrations only. They have not been audited for security. Deloying them to mainnet may cause loss of funds.
 
 
-This repository contains a proof-of-concept implementation of a bridge between Sui and BSV.
-The repository serves as a monorepo for this project.
-It contains:
-- [cli](./cli/): The CLI to interact with the bridge.
+This repository contains proof-of-concept implementations of a bridge between Sui and Bitcoin SV and a bridge between Ethereum and Bitcoin SV. 
+
+**For Sui example:**
+- [cli](./cli/): a rust CLI to interact with the bridge and two python scripts demo_setup.py and python_cli.py for demos. 
 - [move](./move/): The Move code for the smart contracts published on Sui.
-- [zk_engine](./zk_engine/): The zero-knowledge component of the bridge.
+
+**For Ethereum example:**
+- [cli](./cli/): a python script evm_demo.py to semi-automate a demo.
+- [evm](./evm/): the solidity smart contracts and javascripts to deploy and interact with the contracts. 
+
+**For ZKP used by both Sui and Ethereum exmamples:**
+- [zk_engine](./zk_engine/): The zero-knowledge component of the bridges.
 - [zkscript_package](./zkscript_package/): A git submodule that is used to build complex Bitcoin Scripts (zkSNARK verifiers).
 
 ## Requirements
 
-The repository requires Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86), and [Sui](https://docs.sui.io/guides/developer/getting-started).
-If you want to use the Sui localnet, you might want to install the [Sui explorer](https://github.com/suiware/sui-explorer).
+The repository requires
+1. Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86),
+2. [Sui](https://docs.sui.io/guides/developer/getting-started) for Sui example. If you want to use the Sui localnet, you might want to install the [Sui explorer](https://github.com/suiware/sui-explorer).
+3. [Hardhat](https://hardhat.org/hardhat-runner/docs/guides/project-setup) for Ehtereum example. 
+4. [wild-bit-lab](https://github.com/nchain-innovation/wild-bit-lab) for Bitcoin SV regtest.
+
+
 
 ## Getting started
 
@@ -46,6 +57,8 @@ cargo run --release -- setup
 See also [docs/zk_engine](./docs/zk_engine.md). 
 
 If you are running Regtest, you can jump to [Quick setup with Regtest](#quick-setup-with-regtest)
+
+If you are interested in Ethereum example, you can find the instructions here [README](./evm/README.md).
 
 
 ### Publish Sui packages and setup sui cli
