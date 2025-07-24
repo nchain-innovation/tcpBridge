@@ -17,5 +17,5 @@ __pycache__/
 keys/
 proofs/
 wallet.json
-zkscrip_package/
+zkscript_package/
 **/prove.toml
