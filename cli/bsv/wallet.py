@@ -498,17 +498,9 @@ class WalletManager:
             A=prepared_proof.a,
             B=prepared_proof.b,
             C=prepared_proof.c,
-            gradients_pairings=[
-                prepared_proof.gradients_b,
-                prepared_proof.gradients_minus_gamma,
-                prepared_proof.gradients_minus_delta,
-            ],
-            gradients_multiplications=prepared_proof.gradients_multiplications,
             max_multipliers=None,
-            gradients_additions=prepared_proof.gradients_additions,
             inverse_miller_output=prepared_proof.inverse_miller_loop,
-            gradient_precomputed_l_out=prepared_proof.gradient_gamma_abc_zero,
-            has_precomputed_gradients = False,
+            use_proj_coordinates = True,
         )
         
         return unlock_key.to_unlocking_script(mnt4_753)

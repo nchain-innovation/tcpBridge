@@ -45,12 +45,8 @@ def generate_pob_utxo(
         minus_delta=prepared_vk.minus_delta,
         precomputed_l_out=vk.gamma_abc[0].to_list(),
         gamma_abc_without_l_out=[element.to_list() for element in vk.gamma_abc[1:]],
-        gradients_pairings=[
-            prepared_vk.gradients_minus_gamma,
-            prepared_vk.gradients_minus_delta,
-        ],
         sighash_flags=SIGHASH.ALL_FORKID,
-        has_precomputed_gradients=True,
+        use_proj_coordinates=True,
     )
 
     lock = RefTx(mnt4_753).locking_script(

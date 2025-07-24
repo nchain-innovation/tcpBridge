@@ -18,9 +18,12 @@ OUTPUT_INDEX = 0
 
 
 # Commands
+# Pegin and pegout can be replaced by pegin_with_chunks and pegout_with_chunks if 
+# transaction size exceeds 128kB
+
 ADD_BRIDGE_ENTRY_COMMAND = "cargo run -- add-bridge-entry"
-PEGIN_COMMAND = "cargo run -- pegin-with-chunks"
-PEGOUT_COMMAND = "cargo run -- pegout-with-chunks"
+PEGIN_COMMAND = "cargo run -- pegin"
+PEGOUT_COMMAND = "cargo run -- pegout"
 
 def get_bulk_tx_data(txid: str, network: WoCInterface | RPCInterface):
     if isinstance(network, WoCInterface):
