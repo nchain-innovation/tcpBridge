@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.28;
 
-//import "@keep-network/bitcoin-spv-sol/contracts/BTCUtils.sol";
-
 import "hardhat/console.sol";
 
 contract BitcoinHeader {{
@@ -19,16 +17,8 @@ contract BitcoinHeader {{
     mapping(bytes32 => BlockHeader) public blockHeaders;
     mapping(bytes32 => uint256) public chainWorks;
 
-    // --- Hardcoded Genesis Block Data (Bitcoin mainnet example) ---
-
     bytes constant GENESIS_HEADER = hex"{blockheader_serialisation}";
     
-    //header data
-    //0000002097029be80bc4fa22998495bcb2166008a98721df48eed31b1c4f541900000000f081399ca4071a163c86d56bfbaa52c99d4e2aa31313ad036433fe248e91023ae8c16b68afd7381c14c4edb9
-    //00000020ed1d9802760ff759f0fd4f51beea033cc08902e9de1abba00a7b8f1900000000d6519b6c318d3941675750af73b5ef9ca0114a0430919b948c0cbfbea72abc970ec36b68c746371c86e4f2e3
-    //000000202d78bb2086b208cf7519205f6ac8b669b520f6ca4e0e3a2b9f091a1e000000001febdcc3fb33d2318e7a8a91804b46c01f8e065dc0d04659e84b584cb472cad6ebc46b680b38371c3d4b6a8c
-    //00000020fb99d2b3562e04af20851b0d23d0a4d7a6e3fed13858844b60457423000000009e51235fa91247a62dd21c4ac1c98e68af7f083f294a9b0b02359bdd7816008070c86b688c20371ce17ddae1
-
     bytes32 public bestBlockHash;
     uint256 public bestWork;
 
@@ -84,23 +74,15 @@ contract BitcoinHeader {{
         return sha256(abi.encodePacked(sha256(data)));
     }}
 
-    //event HeaderAccepted(bytes32 indexed blockHash, uint256 totalWork);
+    event HeaderAccepted(bytes32 indexed blockHash, uint256 totalWork);
 
-    event HeaderAccepted(bytes32 indexed blockHash);  
+    //event HeaderAccepted(bytes32 indexed blockHash);  
     
     function submitHeader(bytes calldata header) external {{
         require(header.length == 80, "Invalid header length");
         bytes memory headerMem = header;
 
         BlockHeader memory submittedBlockHeader = processHeader(headerMem); 
-
-        // Log the prevBlockHash from the submitted header
-        //console.log("Submitted header's prevBlockHash:");
-        //console.logBytes32(submittedBlockHeader.prevBlockHash);
-
-        // Log the genesis block hash in the mapping
-        //console.log("GENESIS_BLOCKHASH in mapping:");
-        //console.logBytes32(GENESIS_BLOCKHASH);
 
         require(
             blockHeaders[submittedBlockHeader.prevBlockHash].version != 0,

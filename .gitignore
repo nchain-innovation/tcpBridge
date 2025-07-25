@@ -20,3 +20,9 @@ wallet.json
 **/prove.toml
 /evm/*.json
 /evm/*.txt
+
+# Hardhat files
+/evm/cache
+/evm/artifacts
+/evm/node_modules
+/evm/hardhat.config.js
