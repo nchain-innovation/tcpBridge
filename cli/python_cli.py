@@ -95,7 +95,7 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     print(f"\nGenerating genesis transaction...")
 
     wallet_manager.generate_genesis_for_pegin(user)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./sui_bsv_wallet.json")
 
     print(f"\nGenesis transaction generated at: {wallet_manager.genesis_utxos[user][-1]}")
 
@@ -105,7 +105,7 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     print(f"\nGenerating pegout UTXO...")
 
     wallet_manager.generate_pegout(user, issuer_index, -1)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./sui_bsv_wallet.json")
     
     print(f"\nPegout UTXO generated at: {wallet_manager.pegout_utxos[user][-1]}")
 
@@ -242,7 +242,7 @@ def transfer(wallet_manager: WalletManager, sender_name: str, receiver_name: str
 
     print(f"Transferring from {sender_name} to {receiver_name}")
     wallet_manager.transfer_token(sender, receiver, token_index)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./sui_bsv_wallet.json")
     print(f"Successfully transferred token in {wallet_manager.token_utxos[receiver][-1].prev_tx}")
 
     return
@@ -253,7 +253,7 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
     print(f"\nBurning token generated at {wallet_manager.genesis_utxos[user][token_index].prev_tx}")
 
     wallet_manager.burn_token(user, token_index)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./sui_bsv_wallet.json")
 
     conditional_generate_block(wallet_manager.network)
     blockhash = wallet_manager.network.get_best_block_hash()
@@ -273,7 +273,7 @@ def update_oracle(genesis_height: int, network: str):
 
 def get_sui_address(wallet_manager: WalletManager, user_name: str):
     user = map_user_to_index(user_name, wallet_manager)
-    sui_address = wallet_manager.sui_addresses[user]
+    sui_address = wallet_manager.source_addresses[user]
     extended_address = bytes.fromhex("00") * (32 - len(sui_address)) + sui_address
     extended_address = "0x" + extended_address.hex()
     return extended_address
@@ -323,7 +323,7 @@ def main():
 
     # Load wallet
     network = setup_network_connection(args.network)
-    wallet_manager = WalletManager.load_wallet("./wallet.json", network)
+    wallet_manager = WalletManager.load_wallet("./sui_bsv_wallet.json", network)
 
     # Dispatch commands
     if args.command == "setup":
@@ -348,7 +348,7 @@ def main():
     elif args.command == "update":
         update_oracle(args.genesis_height, args.network)
 
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./sui_bsv_wallet.json")
 
 if __name__ == "__main__":
     main()

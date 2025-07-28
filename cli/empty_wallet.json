@@ -1,7 +1,7 @@
 {
     "alice": {
         "bsv_wallet": "",
-        "sui_address": "",
+        "source_address": "",
         "genesis_utxos": [],
         "token_utxos": [],
         "pegout_utxos": [],
@@ -11,7 +11,7 @@
     },
     "bob": {
         "bsv_wallet": "",
-        "sui_address": "",
+        "source_address": "",
         "genesis_utxos": [],
         "token_utxos": [],
         "pegout_utxos": [],
@@ -21,7 +21,7 @@
     },
     "charlie": {
         "bsv_wallet": "",
-        "sui_address": "",
+        "source_address": "",
         "genesis_utxos": [],
         "token_utxos": [],
         "pegout_utxos": [],
@@ -31,7 +31,7 @@
     },
     "issuer": {
         "bsv_wallet": "",
-        "sui_address": "",
+        "source_address": "",
         "genesis_utxos": [],
         "token_utxos": [],
         "pegout_utxos": [],

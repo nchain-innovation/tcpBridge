@@ -94,7 +94,7 @@ def populate_wallet_json(input_json, wallets, output_json):
         if user in wallets:
             data[user]['bsv_wallet'] = wallets[user]["key"]
             data[user]['funding_utxos'] = [wallets[user]["utxo"]]
-            data[user]['sui_address'] = wallets[user]["sui_address"]
+            data[user]['source_address'] = wallets[user]["sui_address"]
 
     # Save the updated JSON
     with open(output_json, 'w') as f:
@@ -118,13 +118,13 @@ def main ():
     print("Setting up wallets...")
     wallets = generate_wallets(users, bsv_client)
     
-    populate_wallet_json("./empty_wallet.json", wallets, "./wallet.json")
+    populate_wallet_json("./empty_wallet.json", wallets, "./sui_bsv_wallet.json")
 
     bsv_client.generate_blocks(1)
 
-    wallet_manager = WalletManager.load_wallet("./wallet.json", bsv_client)
+    wallet_manager = WalletManager.load_wallet("./sui_bsv_wallet.json", bsv_client)
 
-    setup_wallets(wallet_manager, "./wallet.json")
+    setup_wallets(wallet_manager, "./sui_bsv_wallet.json")
 
     blockhash = bsv_client.get_best_block_hash()
     blockheader = BlockHeader.get(blockhash, bsv_client)

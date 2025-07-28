@@ -79,7 +79,7 @@ class WalletManager:
             self,
             names: list[str],
             bsv_wallets: list[Wallet],
-            sui_addresses: list[bytes],
+            source_addresses: list[bytes],
             genesis_utxos: list[list[Outpoint]],
             token_utxos: list[list[Outpoint]],
             pegout_utxos: list[list[Outpoint]],
@@ -90,7 +90,7 @@ class WalletManager:
         ):
         self.names = names
         self.bsv_wallets = bsv_wallets
-        self.sui_addresses = sui_addresses
+        self.source_addresses = source_addresses
         self.genesis_utxos = genesis_utxos
         self.token_utxos = token_utxos
         self.pegout_utxos = pegout_utxos
@@ -104,7 +104,7 @@ class WalletManager:
         return WalletManager(
             names = self.names,
             bsv_wallets=self.bsv_wallets,
-            sui_addresses=self.sui_addresses,
+            source_addresses=self.source_addresses,
             genesis_utxos=[[]] * len(self.bsv_wallets),
             token_utxos=[[]] * len(self.bsv_wallets),
             pegout_utxos=[[]] * len(self.bsv_wallets),
@@ -122,7 +122,7 @@ class WalletManager:
         [
             "name" : {
                 "bsv_wallet": [],
-                "sui_address": [],
+                "source_address": [],
                 "genesis_utxos": [],
                 "token_utxos": [],
                 "pegout_utxos": [],
@@ -145,7 +145,7 @@ class WalletManager:
         try:
             names = []
             bsv_wallets = []
-            sui_addresses = []
+            source_addresses = []
             genesis_utxos = []
             token_utxos = []
             pegout_utxos = []
@@ -157,7 +157,7 @@ class WalletManager:
                 for name in data.keys():
                     names.append(name)
                     bsv_wallets.append(Wallet.from_hexstr(network_str, data[name]["bsv_wallet"]))
-                    sui_addresses.append(bytes.fromhex(data[name]["sui_address"]))
+                    source_addresses.append(bytes.fromhex(data[name]["source_address"]))
                     genesis_utxos_to_add = []
                     token_utxos_to_add = []
                     pegout_utxos_to_add = []
@@ -182,7 +182,7 @@ class WalletManager:
                     zk_proof_paths.append(zk_proof_paths_to_add)
                     funding_utxos.append(funding_utxos_to_add)
                     burnt_tokens.append(burnt_tokens_to_add)
-            return WalletManager(names, bsv_wallets, sui_addresses, genesis_utxos, token_utxos, pegout_utxos, zk_proof_paths, funding_utxos, burnt_tokens, network)
+            return WalletManager(names, bsv_wallets, source_addresses, genesis_utxos, token_utxos, pegout_utxos, zk_proof_paths, funding_utxos, burnt_tokens, network)
 
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             print(f"Error loading wallet data: {e}")
@@ -199,7 +199,7 @@ class WalletManager:
         data = {}
         for (i, name) in enumerate(self.names):
             bsv_priv_key_hex = self.bsv_wallets[i].to_hex()
-            sui_address_hex = self.sui_addresses[i].hex()
+            source_address_hex = self.source_addresses[i].hex()
             genesis_utxos_hex = [utxo.to_hexstr() for utxo in self.genesis_utxos[i]]
             token_utxos_hex = [utxo.to_hexstr() for utxo in self.token_utxos[i]]
             pegout_utxos_hex = [utxo.to_hexstr() for utxo in self.pegout_utxos[i]]
@@ -208,7 +208,7 @@ class WalletManager:
             burnt_tokens_hex = [utxo.to_hexstr() for utxo in self.burnt_tokens[i]]
             data[name] = {}
             data[name]["bsv_wallet"] = bsv_priv_key_hex
-            data[name]["sui_address"] = sui_address_hex
+            data[name]["source_address"] = source_address_hex
             data[name]["genesis_utxos"] = genesis_utxos_hex
             data[name]["token_utxos"] = token_utxos_hex
             data[name]["pegout_utxos"] = pegout_utxos_hex
@@ -517,7 +517,8 @@ class WalletManager:
         funding_tx_index = self.funding_utxos[wallet_index][BURNING_FUNDING_INDEX].prev_index
 
         output_script = Script.parse_string("OP_0 OP_RETURN")
-        extended_address = bytes.fromhex("00") * (32 - len(self.sui_addresses[wallet_index])) + self.sui_addresses[wallet_index]
+       
+        extended_address = bytes.fromhex("00") * (32 - len(self.source_addresses[wallet_index])) + self.source_addresses[wallet_index]
         output_script.append_pushdata(extended_address)
 
         spending_tx = Tx(

@@ -45,7 +45,7 @@ def generate_wallets(users, network):
     return wallets 
 
 def populate_wallet_json(input_json, wallets, output_json):
-    print(f"\nAdding addresses to wallet.json...")
+    print(f"\nAdding addresses to eth_bsv_wallet.json...")
     with open(input_json, 'r') as f:
         data = json.load(f)
     
@@ -54,7 +54,7 @@ def populate_wallet_json(input_json, wallets, output_json):
         if user in wallets:
             data[user]['bsv_wallet'] = wallets[user]["key"]
             data[user]['funding_utxos'] = [wallets[user]["utxo"]]
-            data[user]['eth_address'] = wallets[user]["eth_address"]
+            data[user]['source_address'] = wallets[user]["eth_address"]
 
     # Save the updated JSON
     with open(output_json, 'w') as f:
@@ -74,13 +74,13 @@ def setup_wallets(network):
 
     print(f"\nSetting up wallets for {users}...")
 
-    populate_wallet_json("./empty_wallet.json", wallets, "./wallet.json")
+    populate_wallet_json("./empty_wallet.json", wallets, "./eth_bsv_wallet.json")
     network.generate_blocks(1)
-    wallet_manager = WalletManager.load_wallet("./wallet.json", network)
+    wallet_manager = WalletManager.load_wallet("./eth_bsv_wallet.json", network)
     for i, name in enumerate(wallet_manager.names):
         if name != "issuer":
             wallet_manager.setup(i)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./eth_bsv_wallet.json")
 
     return
 
@@ -186,7 +186,7 @@ def pegin_prep(wallet_manager: WalletManager, user_name: str,pegin_amount: int):
     start = time.perf_counter()
     wallet_manager.generate_genesis_for_pegin(user)
     end = time.perf_counter()
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./eth_bsv_wallet.json")
     print(f"\nGenesis transaction generated at: \n{wallet_manager.genesis_utxos[user][-1]}".replace('prev_', ''))
     print(f"\nElapsed time: {end - start} seconds")
 
@@ -196,7 +196,7 @@ def pegin_prep(wallet_manager: WalletManager, user_name: str,pegin_amount: int):
     print(f"\nGenerating pegout UTXO...")
 
     wallet_manager.generate_pegout(user, issuer_index, -1)
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./eth_bsv_wallet.json")
 
     print(f"\nPegout UTXO generated at: \n{wallet_manager.pegout_utxos[user][-1]}".replace('prev_', ''))
 
@@ -237,7 +237,7 @@ def transfer(wallet_manager: WalletManager, sender_name: str, receiver_name: str
     start = time.perf_counter()
     wallet_manager.transfer_token(sender, receiver, token_index)
     end = time.perf_counter()
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./eth_bsv_wallet.json")
     print(f"Successfully transferred token in {wallet_manager.token_utxos[receiver][-1].prev_tx}")
     print(f"\nElapsed time: {end - start} seconds")
 
@@ -267,9 +267,9 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
 
     print(f"\nBurning token generated at {txid_genesis}")
     start = time.perf_counter()
-    wallet_manager.burn_token(user, token_index, "eth")
+    wallet_manager.burn_token(user, token_index)
     end = time.perf_counter()
-    wallet_manager.save_wallet("./wallet.json")
+    wallet_manager.save_wallet("./eth_bsv_wallet.json")
 
     conditional_generate_block(wallet_manager.network)
 
@@ -281,8 +281,8 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
     print(f"\nToken successfully burned at transaction {txid_burn} \nblock height {best_blockheight} \nblock hash {best_blockhash}")
     print(f"\nElapsed time: {end - start} seconds")
 
-    ethAddress = wallet_manager.eth_addresses[user].hex()
-    
+    ethAddress = wallet_manager.source_addresses[user].hex()
+
     pegout_prep(wallet_manager.network, txid_burn, txid_genesis, best_blockhash, ethAddress)
 
     return
@@ -368,13 +368,15 @@ def main():
     # Dispatch commands
     if args.command == "setup":
         setup_demo(bsv_client)
-    elif args.command == "pegin":
-        pegin(wallet_manager, args.user, args.pegin_amount)
-    elif args.command == "transfer":
-        transfer(wallet_manager, args.sender, args.receiver, args.token_index)
-    elif args.command == "burn":
-        burn(wallet_manager, args.user, args.token_index)
-    elif args.command == "pegout":
+    else:
+        wallet_manager = WalletManager.load_wallet("./eth_bsv_wallet.json", bsv_client)
+        if args.command == "pegin":
+            pegin(wallet_manager, args.user, args.pegin_amount)
+        elif args.command == "transfer":
+            transfer(wallet_manager, args.sender, args.receiver, args.token_index)
+        elif args.command == "burn":
+            burn(wallet_manager, args.user, args.token_index)
+        elif args.command == "pegout":
             pegout(bsv_client)
 
 
