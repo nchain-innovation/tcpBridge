@@ -12,7 +12,7 @@ use sui::bcs;
 const GENESIS_BLOCK: vector<u8> = vector{genesis_block};
 const GENESIS_HASH: vector<u8> = vector{genesis_hash};
 const GENESIS_HEIGHT: u64 = {genesis_height}; // TEMPORARY - DEPENDS ON WHERE THE ORACLE STARTS
-const GENESIS_CHAIN_WORK: u256 = {geesis_chain_work}; // TEMPORARY - DEPENDS ON WHERE THE ORACLE STARTS
+const GENESIS_CHAIN_WORK: u256 = {genesis_chain_work}; // TEMPORARY - DEPENDS ON WHERE THE ORACLE STARTS
 
 /// Error codes
 const EInvalidBlockHeader: u64 = 0;

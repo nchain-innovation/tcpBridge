@@ -86,7 +86,7 @@ def setup_wallets(network):
 
 def publish_oracle(blockheader, richBlockHeader):
     # generate oracle contract from template
-    with open("BitcoinHeader_template.sol", 'r') as f_oracle:
+    with open("../evm/contracts/oracle/BitcoinHeader.sol.template", 'r') as f_oracle:
         oracle_template = f_oracle.read()
         formatted_oracle_template = oracle_template.format(
             blockheader_serialisation = f"{blockheader}",
@@ -114,7 +114,7 @@ def publish_oracle(blockheader, richBlockHeader):
     return oracle_address
 
 def publish_bridge(oracle_address):
-    with open("BitcoinBridge_template.sol", 'r') as f_bridge:
+    with open("../evm/contracts/bridge/BitcoinBridge.sol.template", 'r') as f_bridge:
         bridge_template = f_bridge.read()
         formatted_bridge_template = bridge_template.format(
             oracle_contract_address = f"{oracle_address}"

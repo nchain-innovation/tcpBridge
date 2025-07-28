@@ -3,6 +3,7 @@
 .trace
 .coverage_map.mvcov
 
+
 # MacOS
 .DS_Store
 
@@ -16,8 +17,8 @@ __pycache__/
 # Project specific
 keys/
 proofs/
-wallet.json
-**/prove.toml
+*_bsv_wallet.json
+info.json
 /evm/*.json
 /evm/*.txt
 

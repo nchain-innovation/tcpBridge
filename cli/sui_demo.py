@@ -4,13 +4,15 @@ import requests
 import subprocess
 import toml
 import sys
-
+import json
+import os
 sys.path.append(str(Path(__file__).parent.parent / "zkscript_package"))
-                
+sys.path.append("..")                 
 from bsv.wallet import WalletManager
 from bsv.block_header import BlockHeader, MerkleProof
 from bsv.utils import tx_from_id, setup_network_connection
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
+from tx_engine import Wallet
 
 # TCP
 INPUT_INDEX = 1
@@ -24,6 +26,42 @@ OUTPUT_INDEX = 0
 ADD_BRIDGE_ENTRY_COMMAND = "cargo run -- add-bridge-entry"
 PEGIN_COMMAND = "cargo run -- pegin"
 PEGOUT_COMMAND = "cargo run -- pegout"
+
+INFO_FILE = 'info.json'
+
+def save_info(key, value):
+    try:
+        with open(INFO_FILE, 'r') as f:
+            info = json.load(f)
+    except FileNotFoundError:
+        info = {}
+    info[key] = value
+    with open(INFO_FILE, 'w') as f:
+        json.dump(info, f)
+
+def read_info(key):
+    with open(INFO_FILE, 'r') as f:
+        info = json.load(f)
+    return info.get(key)  
+
+
+def run_cargo_build(project_dir="."):
+    process = subprocess.Popen(
+        ["cargo", "build"],
+        cwd=project_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1  # Line buffered
+    )
+    # Print each line as it is produced
+    for line in process.stdout:
+        print(line, end="")  # 'end=""' avoids double newlines
+    process.wait()
+    if process.returncode == 0:
+        print("Build succeeded!")
+    else:
+        print("Build failed!")
 
 def get_bulk_tx_data(txid: str, network: WoCInterface | RPCInterface):
     if isinstance(network, WoCInterface):
@@ -67,25 +105,174 @@ def run_sui_command(command_args, working_dir=None):
         print(f"Command failed with error {e.returncode}:")
         print(e.stderr)
         return None
-
-def setup(wallet_manager: WalletManager):
-    if isinstance(wallet_manager.network, RPCInterface):
-        # Get funding
-        for i in range(len(wallet_manager.names)):
-            wallet_manager.get_funding(i)
     
-    conditional_generate_block(wallet_manager.network)
 
-    # Setup for everyone except issuer
+def extract_bridge_objects(data):
+    results = {
+        'bridge_admin_id': None,
+        'bridge_id': None,
+        'bridge_ver': None,
+        'package_id': None
+    }
+    for obj in data.get("objectChanges", []):
+        # Extract BridgeAdmin object ID
+        if "BridgeAdmin" in obj.get("objectType", ""):
+            results['bridge_admin_id'] = obj.get("objectId")
+            
+        # Extract TCPBridge object ID and version
+        if "tcpbridge::Bridge" in obj.get("objectType", ""):
+            results['bridge_id'] = obj.get("objectId")
+            results['bridge_ver'] = obj.get("version")
+
+            
+        # Extract package ID
+        if obj.get("type") == "published":
+            results['package_id'] = obj.get("packageId")
+    return results
+
+
+def generate_wallets(users, network):
+    wallets = {user: {} for user in users}
+    for user in users:
+        user_key = Wallet.generate_keypair("BSV_Testnet")
+        user_address = user_key.get_address()
+        network.import_address(user_address)
+        network.send_to_address(user_address, 1)
+        wallets[user]["key"] = user_key.to_hex()
+        print(f"{user} address = {user_address}")
+        funding_utxo = network.get_utxo(user_address)
+        tx_hash = funding_utxo[0]["tx_hash"]
+        tx_pos_hex = funding_utxo[0]["tx_pos"].to_bytes(4, byteorder='little').hex()
+        wallets[user]["utxo"] = f"{tx_hash}:{tx_pos_hex}"
+        sui_address_result = run_sui_command(["client", "new-address", "ed25519", "--json"])
+        sui_address_output = json.loads(sui_address_result)
+        run_sui_command(["client", "switch", "--address", f"{sui_address_output["address"]}"])
+        run_sui_command(["client", "faucet"])
+        wallets[user]["sui_address"] = f"{sui_address_output["address"]}".removeprefix("0x")
+    return wallets 
+
+def populate_wallet_json(input_json, wallets, output_json):
+    with open(input_json, 'r') as f:
+        data = json.load(f)
+    
+    # Populate both "bsv_wallet" and "funding_utxos" fields
+    for user in data:
+        if user in wallets:
+            data[user]['bsv_wallet'] = wallets[user]["key"]
+            data[user]['funding_utxos'] = [wallets[user]["utxo"]]
+            data[user]['source_address'] = wallets[user]["sui_address"]
+
+    # Save the updated JSON
+    with open(output_json, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def setup_wallets(wallet_manager, json_file):
     for i, name in enumerate(wallet_manager.names):
         if name != "issuer":
             wallet_manager.setup(i)
+    wallet_manager.save_wallet(json_file)
 
-    conditional_generate_block(wallet_manager.network)
 
-    print(f"Wallet succesfully set up.")
+def setup_for_regtest(network):
+
+    users = ["alice", "bob", "charlie", "issuer"]
+
+    print("Setting up wallets...")
+    wallets = generate_wallets(users, network)
+    
+    populate_wallet_json("./empty_wallet.json", wallets, "./sui_bsv_wallet.json")
+
+    network.generate_blocks(1)
+
+    wallet_manager = WalletManager.load_wallet("./sui_bsv_wallet.json", network)
+
+    setup_wallets(wallet_manager, "./sui_bsv_wallet.json")
+
+    blockhash = network.get_best_block_hash()
+    blockheader = BlockHeader.get(blockhash, network)
+    richBlockHeader = network.get_block_header(blockhash)
+    genesis_height = richBlockHeader.get("height")
+
+    print(f"\nPublishing Oracle contract with genesis height {genesis_height} ...")
+
+    # generate oracle contract from template
+    with open("blockchain_oracle_template.move", 'r') as f:
+        oracle_template = f.read()
+        formatted_oracle_template = oracle_template.format(
+            genesis_block = f"{list(blockheader.serialise())}",
+            genesis_hash = f"{list(blockheader.hash())}",
+            genesis_height = f"{genesis_height}",
+            genesis_chain_work = f"0x{richBlockHeader.get("chainwork").lstrip("0")}"
+        )   
+    with open("../move/oracle/sources/blockchain_oracle.move", 'w') as f:
+        f.write(formatted_oracle_template)
+    
+
+    oracle_result = run_sui_command(["client", "publish", "--json"], "../move/oracle")
+    oracle_output = json.loads(oracle_result)
+    # Extract package ID
+    oraclePackageId = next(
+        (item["packageId"] for item in oracle_output["objectChanges"] if item.get("type") == "published"),
+            None
+    )   
+    # Get HeaderChain Object ID and Version
+    headerChainId = next(
+        (item["objectId"] for item in oracle_output["objectChanges"] if "::HeaderChain" in item.get("objectType", "")),
+        None
+    )
+    headerChainVer = next(
+        (item["version"] for item in oracle_output["objectChanges"] if "::HeaderChain" in item.get("objectType", "")),
+        None
+    )
+
+    print(f"Oracle Package ID: {oraclePackageId}")
+    print(f"HeaderChain Object ID: {headerChainId}")    
+    print(f"HeaderChain Object version: {headerChainVer}")    
+    save_info("genesis_height", genesis_height)
+
+    print("\nPublishing Bridge contract...")
+
+
+    # generate bridge contract from template
+    with open("tcpbridge_template.move", 'r') as f:
+        bridge_template = f.read()
+    
+    formatted_bridge_template = bridge_template.format(
+        header_chain_objectId=headerChainId
+    )
+    with open("../move/bridge/sources/tcpbridge.move", 'w') as f:
+        f.write(formatted_bridge_template)
+
+    bridge_result = run_sui_command(["client", "publish", "--json"], "../move/bridge")
+    bridge_output = json.loads(bridge_result)
+    bridge_info = extract_bridge_objects(bridge_output)
+    print(f"BridgeAdmin ID: {bridge_info['bridge_admin_id']}")
+    print(f"TCPBridge ID: {bridge_info['bridge_id']}")
+    print(f"TCPBridge Version: {bridge_info['bridge_ver']}")
+    print(f"Package ID: {bridge_info['package_id']}")
+
+    print("\nBuilding client to interact with contracts...")
+
+    # generate configs for building a client to interact with the bridge and the oracle smart contract
+    with open("configs_template.rs", 'r') as f:
+        configs_template = f.read()
+        formatted_configs_template = configs_template.format(
+            bridge_admin_id = bridge_info["bridge_admin_id"].removeprefix("0x"),
+            bridge_id = bridge_info["bridge_id"].removeprefix("0x"), 
+            bridge_ver = bridge_info["bridge_ver"],
+            bridge_package_id = bridge_info["package_id"].removeprefix("0x"),
+            header_chain_id = headerChainId.removeprefix("0x"),
+            header_chain_ver = headerChainVer,
+            oracle_package_id = oraclePackageId.removeprefix("0x"),
+            sui_config_path = f"{os.path.expanduser("~/.sui/sui_config/client.yaml")}"
+        )
+    with open("sui/src/configs.rs", 'w') as f:
+        f.write(formatted_configs_template)
+
+    run_cargo_build("sui")
 
     return
+
     
 def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     user = map_user_to_index(user_name, wallet_manager)
@@ -122,11 +309,17 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
     }
     with open(str(Path(__file__).parent / "sui/config_files/config_add_bridge_entry.toml"), "w") as file:
         toml.dump(data, file)
+        
+    print(f"{run_sui_command(["client", "active-address"])}")
+
 
     #switch to admin to add bridge entry. This address should be the same as the address that is used to publish the bridge contract
     admin_sui_address = get_sui_address(wallet_manager, "issuer")
     run_sui_command(["client", "switch", "--address", f"{admin_sui_address}"])
 
+    print(f"{run_sui_command(["client", "active-address"])}")
+
+    
     # Add bridge entry
     subprocess.run(
             f"cd {Path(__file__).parent / "sui"} && {ADD_BRIDGE_ENTRY_COMMAND}",
@@ -166,17 +359,12 @@ def pegin(wallet_manager: WalletManager, user_name: str, pegin_amount: int):
 
     return
 
-def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_index: int, blockhash: str, block_height: int):
-    user = map_user_to_index(user_name, wallet_manager)
-    burnt_token = wallet_manager.burnt_tokens[user][token_index]
-    burning_tx = tx_from_id(burnt_token.burning_txid, wallet_manager.network)
-    merkle_proof = MerkleProof.get_merkle_proof(blockhash, burnt_token.burning_txid, wallet_manager.network)
-
+def run_pegout_command(genesis_txid, burning_tx, block_height, merkle_proof):
     # Pegout
     print(f"\nPegout...")
 
     data = {
-        "genesis_txid" : burnt_token.genesis_txid,
+        "genesis_txid" : genesis_txid,
         "genesis_index" : OUTPUT_INDEX,
         "burning_tx" : burning_tx.serialize().hex(),
         "block_height" : block_height,
@@ -196,9 +384,28 @@ def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_inde
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    print(f"\nSuccessfully pegged out for \n\tgenesis: {burnt_token.genesis_txid}")
+    print(f"\nSuccessfully pegged out for \n\tgenesis: {genesis_txid}\n")
 
     return
+
+
+def pegout_for_regtest(wallet_manager: WalletManager, user_name: str, token_index: int, blockhash: str, block_height: int):
+    user = map_user_to_index(user_name, wallet_manager)
+    burnt_token = wallet_manager.burnt_tokens[user][token_index]
+    burning_tx = tx_from_id(burnt_token.burning_txid, wallet_manager.network)
+    merkle_proof = MerkleProof.get_merkle_proof(blockhash, burnt_token.burning_txid, wallet_manager.network)
+    sui_address = get_sui_address(wallet_manager, user_name)
+    run_sui_command(["client", "switch", "--address", f"{sui_address}"])
+    print(f"\n{user_name} sui address: {sui_address}")
+    print(f"{run_sui_command(['client', 'balance'])}")
+
+    run_pegout_command(burnt_token.genesis_txid, burning_tx, block_height, merkle_proof)
+
+    print(f"\n{user_name} sui address: {sui_address}")
+    print(f"{run_sui_command(['client', 'balance'])}")
+    
+    return
+
 
 def pegout(wallet_manager: WalletManager, user_name: str, token_index: int):  
     user = map_user_to_index(user_name, wallet_manager)
@@ -208,31 +415,7 @@ def pegout(wallet_manager: WalletManager, user_name: str, token_index: int):
     block_height = bulk_tx_data[0]["blockheight"]
     merkle_proof = MerkleProof.get_merkle_proof(bulk_tx_data[0]["blockhash"], burnt_token.burning_txid, wallet_manager.network)
 
-    # Pegout
-    print(f"\nPegout...")
-
-    data = {
-        "genesis_txid" : burnt_token.genesis_txid,
-        "genesis_index" : OUTPUT_INDEX,
-        "burning_tx" : burning_tx.serialize().hex(),
-        "block_height" : block_height,
-        "merkle_proof" : {
-            "positions" : merkle_proof.positions(),
-            "hashes" : [node.hex() for node in merkle_proof.nodes],
-        }
-    }
-    with open(str(Path(__file__).parent / "sui/config_files/config_pegout.toml"), "w") as file:
-        toml.dump(data, file)
-
-    subprocess.run(
-            f"cd {Path(__file__).parent / "sui"} && {PEGOUT_COMMAND}",
-            shell=True,
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-    print(f"\nSuccessfully pegged out for \n\tgenesis: {burnt_token.genesis_txid}")
+    run_pegout_command(burnt_token.genesis_txid, burning_tx, block_height, merkle_proof)
 
     return
     
@@ -259,6 +442,9 @@ def burn(wallet_manager: WalletManager, user_name: str, token_index: int):
     blockhash = wallet_manager.network.get_best_block_hash()
     blockheader = wallet_manager.network.get_block_header(blockhash)
     blockheight = blockheader.get("height")
+
+    save_info("burn_blockhash", blockhash)
+    save_info("burn_blockheight", blockheight)
 
     print(f"\nToken successfully burned at transaction {wallet_manager.burnt_tokens[user][-1].burning_txid} \nblock height {blockheight} \nblock hash {blockhash}")
 
@@ -297,9 +483,8 @@ def main():
     pegout_parser.add_argument("--user", type=str, required=True, help="The user name")
     pegout_parser.add_argument("--token-index", type=int, required=True, help="The token index")
     pegout_parser.add_argument("--network", type=str, required=True, help="The network")
-    pegout_parser.add_argument("--blockhash", type=str, required=False, help="The blockhash")
-    pegout_parser.add_argument("--block_height", type=int, required=False, help="The blockheight")
-
+    pegout_parser.add_argument("--update", action="store_true", help="update the header oracle before pegout")
+                               
     # Transfer command
     transfer_parser = subparsers.add_parser("transfer", help="Execute the transfer command")
     transfer_parser.add_argument("--sender", type=str, required=True, help="The sender name")
@@ -315,7 +500,6 @@ def main():
 
     # Update command
     update_parser = subparsers.add_parser("update", help="Execute the update oracle command")
-    update_parser.add_argument("--genesis_height", type=int, required=True, help="The genesis block height in Oracle contract")
     update_parser.add_argument("--network", type=str, required=True, help="The network")
 
     # Parse arguments
@@ -323,32 +507,36 @@ def main():
 
     # Load wallet
     network = setup_network_connection(args.network)
-    wallet_manager = WalletManager.load_wallet("./sui_bsv_wallet.json", network)
 
     # Dispatch commands
     if args.command == "setup":
-        if not isinstance(wallet_manager.network, RPCInterface):
-            print("WARNING: Setup outside regtest requires getting funding from a faucet.")
-        setup(wallet_manager)
-    elif args.command == "pegin":
-        pegin(wallet_manager, args.user, args.pegin_amount)
-    elif args.command == "pegout":
-        sui_address = get_sui_address(wallet_manager, args.user)
-        run_sui_command(["client", "switch", "--address", f"{sui_address}"])
-        if args.network == "regtest":
-            assert args.blockhash is not None, "Pegout for regtest requires blockhash"
-            assert args.block_height is not None, "Pegout for regtest requires block height"
-            pegout_for_regtest(wallet_manager, args.user, args.token_index, args.blockhash, args.block_height)
+        if (args.network == "regtest"):
+            setup_for_regtest(network)
         else:
-            pegout(wallet_manager, args.user, args.token_index)
-    elif args.command == "transfer":
-        transfer(wallet_manager, args.sender, args.receiver, args.token_index)
-    elif args.command == "burn":
-        burn(wallet_manager, args.user, args.token_index)
-    elif args.command == "update":
-        update_oracle(args.genesis_height, args.network)
-
-    wallet_manager.save_wallet("./sui_bsv_wallet.json")
+            print("WARNING: Setup outside regtest requires getting funding from a faucet.")
+    else:
+        # setup should be skipped if not in regtest, in which case wallet.json must be populated before calling the commands below.
+        wallet_manager = WalletManager.load_wallet("./sui_bsv_wallet.json", network)
+        if args.command == "pegin":
+            pegin(wallet_manager, args.user, args.pegin_amount)
+        elif args.command == "pegout":
+            if args.update:
+                genesis_height = read_info("genesis_height")
+                update_oracle(genesis_height, args.network)
+            if args.network == "regtest":
+                blockhash = read_info("burn_blockhash")
+                blockheight = read_info("burn_blockheight")
+                pegout_for_regtest(wallet_manager, args.user, args.token_index, blockhash, blockheight)
+            else:
+                pegout(wallet_manager, args.user, args.token_index)
+        elif args.command == "transfer":
+            transfer(wallet_manager, args.sender, args.receiver, args.token_index)
+        elif args.command == "burn":
+            burn(wallet_manager, args.user, args.token_index)
+        elif args.command == "update":
+            genesis_height = read_info("genesis_height")
+            update_oracle(genesis_height, args.network)
+        wallet_manager.save_wallet("./sui_bsv_wallet.json")
 
 if __name__ == "__main__":
     main()
