@@ -99,8 +99,8 @@ contract BitcoinHeader {{
         bestBlockHash = blockHashBE;
         chainWorks[blockHashBE] = totalWork;
         bestWork = totalWork;
-        emit HeaderAccepted(blockHashBE);
-        
+        emit HeaderAccepted(blockHashBE, totalWork);
+
         // else: do nothing (block is ignored)
     }}
 
