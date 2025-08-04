@@ -1,4 +1,5 @@
 """Utilies to facilitate interaction with the blockchain."""
+
 from random import randint
 
 import ecdsa
@@ -10,23 +11,30 @@ GROUP_ORDER = ecdsa.curves.SECP256k1.order
 
 SIG_LEN = 0x48
 
+
 def setup_network_connection(network):
     """Setup network connection."""
     if network == "regtest":
-        return InterfaceFactory().set_config({
-            'interface_type': "rpc",
-            'user': 'bitcoin',
-            'password': 'bitcoin',
-            'network_type': 'testnet',
-            'address': 'localhost:18332',
-            'broadcast_tx': True}
+        return InterfaceFactory().set_config(
+            {
+                "interface_type": "rpc",
+                "user": "bitcoin",
+                "password": "bitcoin",
+                "network_type": "testnet",
+                "address": "localhost:18332",
+                "broadcast_tx": True,
+            }
         )
-    return InterfaceFactory().set_config({"interface_type": "woc", "network_type": network})
+    return InterfaceFactory().set_config(
+        {"interface_type": "woc", "network_type": network}
+    )
 
 
 def tx_to_input(tx: Tx, index: int, unlocking_script: Script, sequence=0) -> TxIn:
     """Turn (tx, index, unlocking_script) into a TxIn."""
-    return TxIn(prev_tx=tx.id(), prev_index=index, script=unlocking_script, sequence=sequence)
+    return TxIn(
+        prev_tx=tx.id(), prev_index=index, script=unlocking_script, sequence=sequence
+    )
 
 
 def update_tx_balance(
@@ -36,9 +44,11 @@ def update_tx_balance(
 ) -> Tx:
     """Update the amount of tx.tx_outs[index] according to the fee rate."""
     tx_size = len(tx.serialize())
-    fee = (tx_size * fee_rate // 1024)
+    fee = tx_size * fee_rate // 1024
 
-    assert tx.tx_outs[index].amount > fee, f"Not enough funds. Fee: {fee}, amount: {tx.tx_outs[index].amount}"
+    assert tx.tx_outs[index].amount > fee, (
+        f"Not enough funds. Fee: {fee}, amount: {tx.tx_outs[index].amount}"
+    )
 
     new_tx_outs = []
     for i, output in enumerate(tx.tx_outs):
@@ -49,7 +59,9 @@ def update_tx_balance(
             )
         )
 
-    return Tx(version=tx.version, tx_ins=tx.tx_ins, tx_outs=new_tx_outs, locktime=tx.locktime)
+    return Tx(
+        version=tx.version, tx_ins=tx.tx_ins, tx_outs=new_tx_outs, locktime=tx.locktime
+    )
 
 
 def bytes_to_script(data: list[bytes]):
@@ -76,12 +88,16 @@ def prepend_signature(
             TxIn(
                 prev_tx=txin.prev_tx,
                 prev_index=txin.prev_index,
-                script=txin.script_sig if i != index else bytes_to_script(sig) + txin.script_sig,
+                script=txin.script_sig
+                if i != index
+                else bytes_to_script(sig) + txin.script_sig,
                 sequence=txin.sequence,
             )
         )
 
-    return Tx(version=tx.version, tx_ins=new_tx_ins, tx_outs=tx.tx_outs, locktime=tx.locktime)
+    return Tx(
+        version=tx.version, tx_ins=new_tx_ins, tx_outs=tx.tx_outs, locktime=tx.locktime
+    )
 
 
 def spend_utxo(
@@ -97,7 +113,12 @@ def spend_utxo(
 
     NOTE: It requires knowledge of the unlocking script needed to spend tx.tx_outs[index].
     """
-    spending_tx = Tx(version=1, tx_ins=[tx_to_input(tx, index, unlocking_script)], tx_outs=outputs, locktime=0)
+    spending_tx = Tx(
+        version=1,
+        tx_ins=[tx_to_input(tx, index, unlocking_script)],
+        tx_outs=outputs,
+        locktime=0,
+    )
 
     spending_tx = update_tx_balance(
         spending_tx,
@@ -173,7 +194,11 @@ def spend_p2pkh(
         flag (SIGHASH): The sighash flag used to create the signatures. Defaults to `SIGHASH.ALL_FORKID`.
     """
     inputs = [
-        tx_to_input(tx, index, bytes_to_script(bytes.fromhex(pub_key.get_public_key_as_hexstr())))
+        tx_to_input(
+            tx,
+            index,
+            bytes_to_script(bytes.fromhex(pub_key.get_public_key_as_hexstr())),
+        )
         for (index, tx, pub_key) in zip(indices, txs, public_keys)
     ]
     spending_tx = Tx(version=1, tx_ins=inputs, tx_outs=outputs, locktime=0)
@@ -225,7 +250,11 @@ def tx_from_id(txid: str, network: BlockchainInterface) -> Tx:
 
 
 def sign_tx_with_random_k(
-    prev_tx: Tx, tx: Tx, index: int, public_key: Wallet, flag: SIGHASH = SIGHASH.ALL_FORKID
+    prev_tx: Tx,
+    tx: Tx,
+    index: int,
+    public_key: Wallet,
+    flag: SIGHASH = SIGHASH.ALL_FORKID,
 ) -> list[bytes]:
     """Sign `tx.tx_ins[index]` with a random ephemeral key.
 
@@ -244,7 +273,9 @@ def sign_tx_with_random_k(
     # Generate sighash
     prev_locking_script = prev_tx.tx_outs[tx.tx_ins[index].prev_index].script_pubkey
     prev_amount = prev_tx.tx_outs[tx.tx_ins[index].prev_index].amount
-    msg = int.from_bytes(sig_hash(tx, index, prev_locking_script, prev_amount, sighash_flags=flag))
+    msg = int.from_bytes(
+        sig_hash(tx, index, prev_locking_script, prev_amount, sighash_flags=flag)
+    )
     # Generate signature
     random_k = randint(2, GROUP_ORDER - 1)  # noqa: S311
     sig = priv_key.sign(msg, random_k)

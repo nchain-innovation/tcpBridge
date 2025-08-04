@@ -1,11 +1,19 @@
-
 import requests
 
 from tx_engine import hash256d
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 
+
 class BlockHeader:
-    def __init__(self, version: int, hash_prev_block: bytes, hash_merkle_root: bytes, time: int, bits: bytes, nonce: int):
+    def __init__(
+        self,
+        version: int,
+        hash_prev_block: bytes,
+        hash_merkle_root: bytes,
+        time: int,
+        bits: bytes,
+        nonce: int,
+    ):
         self.version = version
         self.hash_prev_block = hash_prev_block
         self.hash_merkle_root = hash_merkle_root
@@ -17,13 +25,20 @@ class BlockHeader:
         return f"BlockHeader(\nversion={self.version},\nhash_prev_block={self.hash_prev_block[::-1].hex()},\nhash_merkle_root={self.hash_merkle_root[::-1].hex()},\ntime={self.time},\nbits={self.bits[::-1].hex()},\nnonce={self.nonce})"
 
     def serialise(self):
-        return self.version.to_bytes(4, "little") + self.hash_prev_block + self.hash_merkle_root + self.time.to_bytes(4, "little") + self.bits + self.nonce.to_bytes(4, "little")
-    
+        return (
+            self.version.to_bytes(4, "little")
+            + self.hash_prev_block
+            + self.hash_merkle_root
+            + self.time.to_bytes(4, "little")
+            + self.bits
+            + self.nonce.to_bytes(4, "little")
+        )
+
     def hash(self):
         return hash256d(self.serialise())
-    
+
     def get_target(self):
-        return 256**(self.bits[-1] - 3) * int.from_bytes(self.bits[:-1], "little")
+        return 256 ** (self.bits[-1] - 3) * int.from_bytes(self.bits[:-1], "little")
 
     @staticmethod
     def get(block_hash: str, connection: WoCInterface | RPCInterface):
@@ -34,58 +49,73 @@ class BlockHeader:
             hash_merkle_root=bytes.fromhex(block_header_json["merkleroot"])[::-1],
             time=int(block_header_json["time"]),
             bits=bytes.fromhex(block_header_json["bits"])[::-1],
-            nonce=int(block_header_json["nonce"])
+            nonce=int(block_header_json["nonce"]),
         )
 
-class MerkleProof:
 
+class MerkleProof:
     def __init__(self, index: int, nodes: list[bytes]):
         self.index = index
         self.nodes = nodes
-        
-    def __repr__(self):
-        return f"MerkleProof(\nindex={self.index},\nnodes=[{"".join([f"\n\t{node.hex()}," if node != '*' else '*,' for node in self.nodes])}\n])"
 
-    #This requires compatible implementation of SPV in smart contracts to handle abbreviation of duplicated nodes in a Merkle tree.
+    def __repr__(self):
+        return f"MerkleProof(\nindex={self.index},\nnodes=[{''.join([f'\n\t{node.hex()},' if node != '*' else '*,' for node in self.nodes])}\n])"
+
+    # This requires compatible implementation of SPV in smart contracts to handle abbreviation of duplicated nodes in a Merkle tree.
     @staticmethod
-    def get_optimised_merkle_proof(block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface):
+    def get_optimised_merkle_proof(
+        block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface
+    ):
         if isinstance(connection, WoCInterface):
             merkle_proof_json = connection.get_merkle_proof(block_hash, tx_id)[0]
         else:
             payload = {
-                        "method": "getmerkleproof2",
-                        "params": [block_hash, tx_id],
-                        "jsonrpc": "2.0",
-                        "id": 1
+                "method": "getmerkleproof2",
+                "params": [block_hash, tx_id],
+                "jsonrpc": "2.0",
+                "id": 1,
             }
-            merkle_proof_json = requests.post("http://" + connection.address, json=payload, auth=(connection.user, connection.password)).json()["result"]
+            merkle_proof_json = requests.post(
+                "http://" + connection.address,
+                json=payload,
+                auth=(connection.user, connection.password),
+            ).json()["result"]
         index = merkle_proof_json["index"]
-        nodes = [bytes.fromhex(node)[::-1] if node != '*' else '*' for node in merkle_proof_json["nodes"]]
+        nodes = [
+            bytes.fromhex(node)[::-1] if node != "*" else "*"
+            for node in merkle_proof_json["nodes"]
+        ]
         return MerkleProof(index, nodes)
-    
+
     @staticmethod
-    def get_merkle_proof(block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface):
+    def get_merkle_proof(
+        block_hash: str, tx_id: str, connection: WoCInterface | RPCInterface
+    ):
         if isinstance(connection, WoCInterface):
             merkle_proof_json = connection.get_merkle_proof(block_hash, tx_id)[0]
         else:
             payload = {
-                        "method": "getmerkleproof2",
-                        "params": [block_hash, tx_id],
-                        "jsonrpc": "2.0",
-                        "id": 1
+                "method": "getmerkleproof2",
+                "params": [block_hash, tx_id],
+                "jsonrpc": "2.0",
+                "id": 1,
             }
-            merkle_proof_json = requests.post("http://" + connection.address, json=payload, auth=(connection.user, connection.password)).json()["result"]
+            merkle_proof_json = requests.post(
+                "http://" + connection.address,
+                json=payload,
+                auth=(connection.user, connection.password),
+            ).json()["result"]
         index = merkle_proof_json["index"]
         nodes = []
         hash = bytes.fromhex(tx_id)[::-1]
         for node in merkle_proof_json["nodes"]:
-            if node == '*':
+            if node == "*":
                 nodes.append(hash)
-                hash = hash256d(hash+hash)
+                hash = hash256d(hash + hash)
             else:
                 nodes.append(bytes.fromhex(node)[::-1])
         return MerkleProof(index, nodes)
-    
+
     def positions(self) -> list[int]:
         out = []
         index = self.index
@@ -93,7 +123,7 @@ class MerkleProof:
             out.append(index & 1)
             index >>= 1
         return out
-    
+
     def validate(self, tx_id: str, target: bytes):
         # Use positions to mimic what happens in Move
         positions = self.positions()

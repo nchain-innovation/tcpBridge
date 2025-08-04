@@ -1,4 +1,3 @@
-
 import sys
 import json
 from pathlib import Path
@@ -7,7 +6,14 @@ import toml
 
 sys.path.append(str(Path(__file__).parent.parent.parent / "zkscript_package"))
 
-from bsv.utils import bytes_to_script, prepend_signature, tx_to_input, tx_from_id, p2pkh, spend_p2pkh, p2pkh
+from bsv.utils import (
+    bytes_to_script,
+    prepend_signature,
+    tx_to_input,
+    tx_from_id,
+    spend_p2pkh,
+    p2pkh,
+)
 from bsv.zk_utils import load_and_process_vk, generate_pob_utxo
 
 from elliptic_curves.instantiations.mnt4_753.mnt4_753 import MNT4_753, ProofMnt4753
@@ -20,12 +26,12 @@ from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 ScalarFieldMNT4 = MNT4_753.scalar_field
 
 
-SETUP_INDEX = -1 # Funding index for setup
-BURNING_FUNDING_INDEX = -2 # Funding index for burning is second to last
+SETUP_INDEX = -1  # Funding index for setup
+BURNING_FUNDING_INDEX = -2  # Funding index for burning is second to last
 BALLPARK_TRANSACTION_SIZE = 300
-BALLPARK_TRANSACTION_FEE = BALLPARK_TRANSACTION_SIZE * 50 // 1000 # 50 satoshis per kB
+BALLPARK_TRANSACTION_FEE = BALLPARK_TRANSACTION_SIZE * 50 // 1000  # 50 satoshis per kB
 BALLPARK_BURNING_TX_SIZE = 300000
-BALLPARK_BURNING_TX_FEE = BALLPARK_BURNING_TX_SIZE * 50 // 1000 # 50 satoshis per kB
+BALLPARK_BURNING_TX_FEE = BALLPARK_BURNING_TX_SIZE * 50 // 1000  # 50 satoshis per kB
 TRANSFER_ZK_PROOF = "cargo run --release -- tcp-engine prove"
 BURNING_ZK_PROOF = "cargo run --release -- pob-engine prove"
 
@@ -34,8 +40,8 @@ The structure of the WalletManager assumes that genesis & pegout are added in or
 then pegout_1 and pegout_2 must be added in this order. If not, the structure will be messed up.
 """
 
-class Outpoint:
 
+class Outpoint:
     def __init__(self, prev_tx: str, prev_index: int):
         self.prev_tx = prev_tx
         self.prev_index = prev_index
@@ -44,50 +50,47 @@ class Outpoint:
     def from_hexstr(outpoint: str):
         return Outpoint(
             outpoint.split(":")[0],
-            int.from_bytes(bytes.fromhex(outpoint.split(":")[1]), "little")
-            )
-    
+            int.from_bytes(bytes.fromhex(outpoint.split(":")[1]), "little"),
+        )
+
     def to_hexstr(self) -> str:
         return f"{self.prev_tx}:{self.prev_index.to_bytes(4, 'little').hex()}"
-    
+
     def __repr__(self):
         return f"prev_tx: {self.prev_tx}, prev_index: {self.prev_index}"
-    
-class BurntToken:
 
+
+class BurntToken:
     def __init__(self, genesis_txid: str, burning_txid: str):
         self.genesis_txid = genesis_txid
         self.burning_txid = burning_txid
 
     def to_hexstr(self) -> str:
         return f"{self.genesis_txid}:{self.burning_txid}"
-    
+
     @staticmethod
     def from_hexstr(burnt_token: str):
         elements = burnt_token.split(":")
-        return BurntToken(
-            genesis_txid=elements[0],
-            burning_txid=elements[1]
-        )
-    
+        return BurntToken(genesis_txid=elements[0], burning_txid=elements[1])
+
     def __repr__(self):
         return f"Genesis: {self.genesis_txid}, Burning tx: {self.burning_txid}"
 
-class WalletManager:
 
+class WalletManager:
     def __init__(
-            self,
-            names: list[str],
-            bsv_wallets: list[Wallet],
-            source_addresses: list[bytes],
-            genesis_utxos: list[list[Outpoint]],
-            token_utxos: list[list[Outpoint]],
-            pegout_utxos: list[list[Outpoint]],
-            zk_proof_paths: list[str],
-            funding_utxos: list[list[Outpoint]],
-            burnt_tokens: list[BurntToken],
-            network: BlockchainInterface,
-        ):
+        self,
+        names: list[str],
+        bsv_wallets: list[Wallet],
+        source_addresses: list[bytes],
+        genesis_utxos: list[list[Outpoint]],
+        token_utxos: list[list[Outpoint]],
+        pegout_utxos: list[list[Outpoint]],
+        zk_proof_paths: list[str],
+        funding_utxos: list[list[Outpoint]],
+        burnt_tokens: list[BurntToken],
+        network: BlockchainInterface,
+    ):
         self.names = names
         self.bsv_wallets = bsv_wallets
         self.source_addresses = source_addresses
@@ -99,10 +102,9 @@ class WalletManager:
         self.burnt_tokens = burnt_tokens
         self.network = network
 
-
     def clear_wallet(self):
         return WalletManager(
-            names = self.names,
+            names=self.names,
             bsv_wallets=self.bsv_wallets,
             source_addresses=self.source_addresses,
             genesis_utxos=[[]] * len(self.bsv_wallets),
@@ -152,11 +154,13 @@ class WalletManager:
             zk_proof_paths = []
             funding_utxos = []
             burnt_tokens = []
-            with open(wallet_path, 'r') as file:
+            with open(wallet_path, "r") as file:
                 data = json.load(file)
                 for name in data.keys():
                     names.append(name)
-                    bsv_wallets.append(Wallet.from_hexstr(network_str, data[name]["bsv_wallet"]))
+                    bsv_wallets.append(
+                        Wallet.from_hexstr(network_str, data[name]["bsv_wallet"])
+                    )
                     source_addresses.append(bytes.fromhex(data[name]["source_address"]))
                     genesis_utxos_to_add = []
                     token_utxos_to_add = []
@@ -182,12 +186,22 @@ class WalletManager:
                     zk_proof_paths.append(zk_proof_paths_to_add)
                     funding_utxos.append(funding_utxos_to_add)
                     burnt_tokens.append(burnt_tokens_to_add)
-            return WalletManager(names, bsv_wallets, source_addresses, genesis_utxos, token_utxos, pegout_utxos, zk_proof_paths, funding_utxos, burnt_tokens, network)
+            return WalletManager(
+                names,
+                bsv_wallets,
+                source_addresses,
+                genesis_utxos,
+                token_utxos,
+                pegout_utxos,
+                zk_proof_paths,
+                funding_utxos,
+                burnt_tokens,
+                network,
+            )
 
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             print(f"Error loading wallet data: {e}")
             return None
-        
 
     def save_wallet(self, wallet_path: str):
         """
@@ -197,7 +211,7 @@ class WalletManager:
             wallet_path (str): The path to save the wallet configuration file.
         """
         data = {}
-        for (i, name) in enumerate(self.names):
+        for i, name in enumerate(self.names):
             bsv_priv_key_hex = self.bsv_wallets[i].to_hex()
             source_address_hex = self.source_addresses[i].hex()
             genesis_utxos_hex = [utxo.to_hexstr() for utxo in self.genesis_utxos[i]]
@@ -216,26 +230,32 @@ class WalletManager:
             data[name]["funding_utxos"] = funding_utxos_hex
             data[name]["burnt_tokens"] = burnt_tokens_hex
 
-        with open(wallet_path, 'w') as file:
+        with open(wallet_path, "w") as file:
             json.dump(data, file, indent=4)
 
         return
 
-
     def get_funding(self, wallet_index: int):
-        assert isinstance(self.network, RPCInterface), "get_funding is supported only for regtest"
+        assert isinstance(self.network, RPCInterface), (
+            "get_funding is supported only for regtest"
+        )
 
-        funding_txid = self.network.send_to_address(self.bsv_wallets[wallet_index].get_address())
+        funding_txid = self.network.send_to_address(
+            self.bsv_wallets[wallet_index].get_address()
+        )
         for i in range(5):
             try:
                 self.network.generate_blocks(1)
                 break
-            except:
+            except Exception:
                 pass
         funding_tx = tx_from_id(funding_txid, self.network)
         index = None
-        for (i, outputs) in enumerate(funding_tx.tx_outs):
-            if outputs.script_pubkey == self.bsv_wallets[wallet_index].get_locking_script():
+        for i, outputs in enumerate(funding_tx.tx_outs):
+            if (
+                outputs.script_pubkey
+                == self.bsv_wallets[wallet_index].get_locking_script()
+            ):
                 index = i
                 break
         assert index is not None
@@ -243,17 +263,22 @@ class WalletManager:
 
         return
 
-
     def setup(self, wallet_index: int):
         """Split funds for wallet_index into 10 smaller denominations.
-        
+
         To be called only at the beginning of the DEMO. It uses `SETUP_INDEX` to perform the setup."""
-        funding_tx = tx_from_id(self.funding_utxos[wallet_index][SETUP_INDEX].prev_tx, self.network)
-        amount = funding_tx.tx_outs[self.funding_utxos[wallet_index][SETUP_INDEX].prev_index].amount
+        funding_tx = tx_from_id(
+            self.funding_utxos[wallet_index][SETUP_INDEX].prev_tx, self.network
+        )
+        amount = funding_tx.tx_outs[
+            self.funding_utxos[wallet_index][SETUP_INDEX].prev_index
+        ].amount
         split_amount = BALLPARK_TRANSACTION_FEE
         remaning_amount = amount - split_amount * 10 - BALLPARK_BURNING_TX_FEE
 
-        outputs = [p2pkh(self.bsv_wallets[wallet_index], split_amount) for _ in range(10)]
+        outputs = [
+            p2pkh(self.bsv_wallets[wallet_index], split_amount) for _ in range(10)
+        ]
         outputs.append(p2pkh(self.bsv_wallets[wallet_index], BALLPARK_BURNING_TX_FEE))
         outputs.append(p2pkh(self.bsv_wallets[wallet_index], remaning_amount))
 
@@ -264,7 +289,7 @@ class WalletManager:
             11,
             [self.bsv_wallets[wallet_index]],
             50,
-            self.network
+            self.network,
         )
 
         assert response.status_code == 200, f"Error spending UTXO: {response.content}"
@@ -277,15 +302,18 @@ class WalletManager:
 
         return
 
-
     def generate_genesis_for_pegin(self, wallet_index: int):
         """Generate genesis for pegin.
-        
+
         Uses last funding UTXO as that is the one with most funds by design."""
-        funding_tx = tx_from_id(self.funding_utxos[wallet_index][-1].prev_tx, self.network)
+        funding_tx = tx_from_id(
+            self.funding_utxos[wallet_index][-1].prev_tx, self.network
+        )
         funding_index = self.funding_utxos[wallet_index][-1].prev_index
         genesis = p2pkh(self.bsv_wallets[wallet_index], 1)
-        change = p2pkh(self.bsv_wallets[wallet_index], funding_tx.tx_outs[funding_index].amount - 1)
+        change = p2pkh(
+            self.bsv_wallets[wallet_index], funding_tx.tx_outs[funding_index].amount - 1
+        )
 
         (spending_tx, response) = spend_p2pkh(
             [funding_tx],
@@ -294,38 +322,41 @@ class WalletManager:
             1,
             [self.bsv_wallets[wallet_index]],
             50,
-            self.network
+            self.network,
         )
 
         assert response.status_code == 200, f"Error spending UTXO: {response.content}"
 
         data = {
             "proof_name": f"proof_{spending_tx.id()}",
-            "chain_parameters" : {
+            "chain_parameters": {
                 "input_index": 1,
                 "output_index": 0,
             },
-            "public_inputs" : {
+            "public_inputs": {
                 "outpoint_txid": spending_tx.id(),
                 "genesis_txid": spending_tx.id(),
             },
-            "witness" : {
-                "tx": "",
-                "prior_proof_path": ""
-            }
+            "witness": {"tx": "", "prior_proof_path": ""},
         }
         # Write data
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/tcp_engine/configs/prove.toml"), "w") as f:
+        with open(
+            str(
+                Path(__file__).parent.parent.parent
+                / "zk_engine/data/tcp_engine/configs/prove.toml"
+            ),
+            "w",
+        ) as f:
             toml.dump(data, f)
             f.close()
         # Generate proof
         subprocess.run(
-            f"cd {Path(__file__).parent.parent.parent / "zk_engine"} && {TRANSFER_ZK_PROOF}",
+            f"cd {Path(__file__).parent.parent.parent / 'zk_engine'} && {TRANSFER_ZK_PROOF}",
             shell=True,
             check=True,
             text=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
 
         self.genesis_utxos[wallet_index].append(Outpoint(spending_tx.id(), 0))
@@ -336,16 +367,21 @@ class WalletManager:
 
         return
 
-
     def generate_pegout(self, wallet_index: int, issuer_index: int, token_index: int):
-        funding_tx = tx_from_id(self.funding_utxos[issuer_index][-1].prev_tx, self.network)
+        funding_tx = tx_from_id(
+            self.funding_utxos[issuer_index][-1].prev_tx, self.network
+        )
         funding_index = self.funding_utxos[issuer_index][-1].prev_index
 
-        genesis_tx = tx_from_id(self.genesis_utxos[wallet_index][token_index].prev_tx, self.network)
+        genesis_tx = tx_from_id(
+            self.genesis_utxos[wallet_index][token_index].prev_tx, self.network
+        )
 
         vk, _, prepared_vk = load_and_process_vk(genesis_tx.hash())
         pegout = generate_pob_utxo(vk, prepared_vk)
-        change = p2pkh(self.bsv_wallets[issuer_index], funding_tx.tx_outs[funding_index].amount)
+        change = p2pkh(
+            self.bsv_wallets[issuer_index], funding_tx.tx_outs[funding_index].amount
+        )
 
         (spending_tx, response) = spend_p2pkh(
             [funding_tx],
@@ -354,7 +390,7 @@ class WalletManager:
             1,
             [self.bsv_wallets[issuer_index]],
             50,
-            self.network
+            self.network,
         )
 
         assert response.status_code == 200, f"Error spending UTXO: {response.content}"
@@ -365,80 +401,97 @@ class WalletManager:
 
         return
 
-
     def add_pegout(self, wallet_index: int, pegout: Outpoint):
         self.pegout_utxos[wallet_index].append(pegout)
-        
-        return
 
+        return
 
     def add_funding(self, wallet_index: int, funding: Outpoint):
         self.funding_utxos[wallet_index].append(funding)
         return
 
-
-    def __generate_transfer_zk_proof(self, spending_tx: Tx, wallet_index: int, token_index: int):
+    def __generate_transfer_zk_proof(
+        self, spending_tx: Tx, wallet_index: int, token_index: int
+    ):
         data = {
             "proof_name": self.zk_proof_paths[wallet_index][token_index],
-            "chain_parameters" : {
+            "chain_parameters": {
                 "input_index": 1,
                 "output_index": 0,
             },
-            "public_inputs" : {
+            "public_inputs": {
                 "outpoint_txid": spending_tx.id(),
-                "genesis_txid": self.genesis_utxos[wallet_index][token_index].prev_tx
+                "genesis_txid": self.genesis_utxos[wallet_index][token_index].prev_tx,
             },
-            "witness" : {
+            "witness": {
                 "tx": spending_tx.serialize().hex(),
-                "prior_proof_path": self.zk_proof_paths[wallet_index][token_index]
-            }
+                "prior_proof_path": self.zk_proof_paths[wallet_index][token_index],
+            },
         }
         # Write data
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/tcp_engine/configs/prove.toml"), "w") as f:
+        with open(
+            str(
+                Path(__file__).parent.parent.parent
+                / "zk_engine/data/tcp_engine/configs/prove.toml"
+            ),
+            "w",
+        ) as f:
             toml.dump(data, f)
             f.close()
         # Generate proof
         subprocess.run(
-            f"cd {Path(__file__).parent.parent.parent / "zk_engine"} && {TRANSFER_ZK_PROOF}",
+            f"cd {Path(__file__).parent.parent.parent / 'zk_engine'} && {TRANSFER_ZK_PROOF}",
             shell=True,
             check=True,
             text=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
 
         return
 
-
-    def __generate_burning_zk_proof(self, wallet_index: int, spending_tx: Tx, token_index: int):
+    def __generate_burning_zk_proof(
+        self, wallet_index: int, spending_tx: Tx, token_index: int
+    ):
         data = {
-            "genesis_txid" : self.genesis_utxos[wallet_index][token_index].prev_tx,
+            "genesis_txid": self.genesis_utxos[wallet_index][token_index].prev_tx,
             "spending_tx": spending_tx.serialize().hex(),
             "tcp_proof_name": self.zk_proof_paths[wallet_index][token_index],
             "prev_amount": 1,
         }
         # Write data
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/pob_engine/configs/prove.toml"), "w") as f:
+        with open(
+            str(
+                Path(__file__).parent.parent.parent
+                / "zk_engine/data/pob_engine/configs/prove.toml"
+            ),
+            "w",
+        ) as f:
             toml.dump(data, f)
             f.close()
         # Generate proof
         subprocess.run(
-            f"cd {Path(__file__).parent.parent.parent / "zk_engine"} && {BURNING_ZK_PROOF}",
+            f"cd {Path(__file__).parent.parent.parent / 'zk_engine'} && {BURNING_ZK_PROOF}",
             shell=True,
             check=True,
             text=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
 
         return
 
-
-    def transfer_token(self, sender_index: int, receiver_index: int, token_index: int = 0):
+    def transfer_token(
+        self, sender_index: int, receiver_index: int, token_index: int = 0
+    ):
         """Transfer the token from sender_index to receiver_index."""
-        token_tx = tx_from_id(self.token_utxos[sender_index][token_index].prev_tx, self.network)
+        token_tx = tx_from_id(
+            self.token_utxos[sender_index][token_index].prev_tx, self.network
+        )
         token_tx_index = self.token_utxos[sender_index][token_index].prev_index
-        funding_tx = tx_from_id(self.funding_utxos[receiver_index][0].prev_tx, self.network)
+        funding_tx = tx_from_id(
+            self.funding_utxos[receiver_index][0].prev_tx, self.network
+        )
         funding_tx_index = self.funding_utxos[receiver_index][0].prev_index
 
         token_output = p2pkh(self.bsv_wallets[receiver_index], 1)
@@ -447,10 +500,10 @@ class WalletManager:
             [funding_tx, token_tx],
             [funding_tx_index, token_tx_index],
             [token_output],
-            0, # dummy
+            0,  # dummy
             [self.bsv_wallets[receiver_index], self.bsv_wallets[sender_index]],
             0,
-            self.network
+            self.network,
         )
 
         assert response.status_code == 200, f"Error spending UTXO: {response.content}"
@@ -463,29 +516,46 @@ class WalletManager:
         genesis_utxo = self.genesis_utxos[sender_index].pop(token_index)
         pegout_utxo = self.pegout_utxos[sender_index].pop(token_index)
         zk_proof_path = self.zk_proof_paths[sender_index].pop(token_index)
-        
+
         self.genesis_utxos[receiver_index].append(genesis_utxo)
         self.pegout_utxos[receiver_index].append(pegout_utxo)
         self.token_utxos[receiver_index].append(Outpoint(spending_tx.id(), 0))
         self.zk_proof_paths[receiver_index].append(zk_proof_path)
 
         return
-    
 
     def __generate_pegout_unlocking_script(self, wallet_index: int, token_index: int):
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/pob_engine/proofs/proof_of_burn.bin"), "rb") as f:
+        with open(
+            str(
+                Path(__file__).parent.parent.parent
+                / "zk_engine/data/pob_engine/proofs/proof_of_burn.bin"
+            ),
+            "rb",
+        ) as f:
             proof_bytes = list(f.read())
             proof = ProofMnt4753.deserialise(proof_bytes[8:])
-        with open(str(Path(__file__).parent.parent.parent / "zk_engine/data/pob_engine/proofs/input_proof_of_burn.bin"), "rb") as f:
+        with open(
+            str(
+                Path(__file__).parent.parent.parent
+                / "zk_engine/data/pob_engine/proofs/input_proof_of_burn.bin"
+            ),
+            "rb",
+        ) as f:
             processed_input_bytes = list(f.read())
             # Bit length of a single input
             length = (MNT4_753.scalar_field.get_modulus().bit_length() + 8) // 8
             # Fetch the second input (the first one is the genesis_txid, which we hard-coded)
             # Bytes are:
             #   [total length of bytestring] [2 as u64] [genesis_txid as element in MNT4_753.scalar_field] [integrity tag = sighash]
-            input = [ScalarFieldMNT4.deserialise(processed_input_bytes[16 + length :]).to_int()]
+            input = [
+                ScalarFieldMNT4.deserialise(
+                    processed_input_bytes[16 + length :]
+                ).to_int()
+            ]
 
-        genesis_tx = tx_from_id(self.genesis_utxos[wallet_index][token_index].prev_tx, self.network)
+        genesis_tx = tx_from_id(
+            self.genesis_utxos[wallet_index][token_index].prev_tx, self.network
+        )
         _, cache_vk, _ = load_and_process_vk(genesis_tx.hash())
 
         # Prepare the proof
@@ -500,25 +570,36 @@ class WalletManager:
             C=prepared_proof.c,
             max_multipliers=None,
             inverse_miller_output=prepared_proof.inverse_miller_loop,
-            use_proj_coordinates = True,
+            use_proj_coordinates=True,
         )
-        
-        return unlock_key.to_unlocking_script(mnt4_753)
 
+        return unlock_key.to_unlocking_script(mnt4_753)
 
     def burn_token(self, wallet_index: int, token_index: int):
         """Burn the token at token_index owned by the address at wallet_index."""
 
-        token_tx = tx_from_id(self.token_utxos[wallet_index][token_index].prev_tx, self.network)
+        token_tx = tx_from_id(
+            self.token_utxos[wallet_index][token_index].prev_tx, self.network
+        )
         token_tx_index = self.token_utxos[wallet_index][token_index].prev_index
-        pegout_tx = tx_from_id(self.pegout_utxos[wallet_index][token_index].prev_tx, self.network)
+        pegout_tx = tx_from_id(
+            self.pegout_utxos[wallet_index][token_index].prev_tx, self.network
+        )
         pegout_tx_index = self.pegout_utxos[wallet_index][token_index].prev_index
-        funding_tx = tx_from_id(self.funding_utxos[wallet_index][BURNING_FUNDING_INDEX].prev_tx, self.network)
-        funding_tx_index = self.funding_utxos[wallet_index][BURNING_FUNDING_INDEX].prev_index
+        funding_tx = tx_from_id(
+            self.funding_utxos[wallet_index][BURNING_FUNDING_INDEX].prev_tx,
+            self.network,
+        )
+        funding_tx_index = self.funding_utxos[wallet_index][
+            BURNING_FUNDING_INDEX
+        ].prev_index
 
         output_script = Script.parse_string("OP_0 OP_RETURN")
-       
-        extended_address = bytes.fromhex("00") * (32 - len(self.source_addresses[wallet_index])) + self.source_addresses[wallet_index]
+
+        extended_address = (
+            bytes.fromhex("00") * (32 - len(self.source_addresses[wallet_index]))
+            + self.source_addresses[wallet_index]
+        )
         output_script.append_pushdata(extended_address)
 
         spending_tx = Tx(
@@ -526,22 +607,38 @@ class WalletManager:
             tx_ins=[
                 tx_to_input(pegout_tx, pegout_tx_index, Script()),
                 tx_to_input(token_tx, token_tx_index, Script()),
-                tx_to_input(funding_tx, funding_tx_index, Script())
+                tx_to_input(funding_tx, funding_tx_index, Script()),
             ],
-            tx_outs=[
-                TxOut(amount=0, script_pubkey=output_script)
-            ],
+            tx_outs=[TxOut(amount=0, script_pubkey=output_script)],
             locktime=0,
         )
 
         self.__generate_burning_zk_proof(wallet_index, spending_tx, token_index)
 
-        pegout_unlocking_script = self.__generate_pegout_unlocking_script(wallet_index, token_index)
+        pegout_unlocking_script = self.__generate_pegout_unlocking_script(
+            wallet_index, token_index
+        )
 
         inputs = [
             tx_to_input(pegout_tx, pegout_tx_index, pegout_unlocking_script),
-            tx_to_input(token_tx, token_tx_index, bytes_to_script(bytes.fromhex(self.bsv_wallets[wallet_index].get_public_key_as_hexstr()))),
-            tx_to_input(funding_tx, funding_tx_index, bytes_to_script(bytes.fromhex(self.bsv_wallets[wallet_index].get_public_key_as_hexstr()))),
+            tx_to_input(
+                token_tx,
+                token_tx_index,
+                bytes_to_script(
+                    bytes.fromhex(
+                        self.bsv_wallets[wallet_index].get_public_key_as_hexstr()
+                    )
+                ),
+            ),
+            tx_to_input(
+                funding_tx,
+                funding_tx_index,
+                bytes_to_script(
+                    bytes.fromhex(
+                        self.bsv_wallets[wallet_index].get_public_key_as_hexstr()
+                    )
+                ),
+            ),
         ]
 
         spending_tx = Tx(
@@ -565,17 +662,18 @@ class WalletManager:
             self.bsv_wallets[wallet_index],
         )
 
-
         response = self.network.broadcast_tx(spending_tx.serialize().hex())
         assert response.status_code == 200, f"Error burning pegout: {response.content}"
-        
+
         genesis_txid = self.genesis_utxos[wallet_index].pop(token_index)
         self.token_utxos[wallet_index].pop(token_index)
         self.pegout_utxos[wallet_index].pop(token_index)
         self.zk_proof_paths[wallet_index].pop(token_index)
-        self.burnt_tokens[wallet_index].append(BurntToken(
-            genesis_txid.prev_tx,
-            spending_tx.id(),
-        ))
+        self.burnt_tokens[wallet_index].append(
+            BurntToken(
+                genesis_txid.prev_tx,
+                spending_tx.id(),
+            )
+        )
 
         return
