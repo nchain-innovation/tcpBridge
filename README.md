@@ -1,4 +1,4 @@
-# Bridging your blockchain to Bitcoin SV
+# Bridging Ethereum and Sui to Bitcoin SV
 
 > [!WARNING]
 > All smart contracts provided in this repo is for research, experiments and demostrations only. They have not been audited for security. Deloying them to mainnet may cause loss of funds.
@@ -6,25 +6,26 @@
 
 This repository contains proof-of-concept implementations of a bridge between Sui and Bitcoin SV and a bridge between Ethereum and Bitcoin SV. 
 
-**For Sui example:**
-- [cli](./cli/): a rust CLI to interact with the bridge and two python scripts demo_setup.py and python_cli.py for demos. 
-- [move](./move/): The Move code for the smart contracts published on Sui.
+**For Sui:**
+- In [cli](./cli/): a client written in Rust to interact with the Sui contracts and a python script sui_demo.py for demos. 
+- [move](./move/): The Move code for the smart contracts to be published on Sui.
 
-**For Ethereum example:**
+**For Ethereum:**
 - [cli](./cli/): a python script evm_demo.py to semi-automate a demo.
-- [evm](./evm/): the solidity smart contracts and javascripts to deploy and interact with the contracts. 
+- [evm](./evm/): the solidity smart contracts and javascripts to deploy and interact with the Ethereum contracts. 
 
-**For ZKP used by both Sui and Ethereum exmamples:**
+**For ZKP used by both Sui and Ethereum bridges:**
 - [zk_engine](./zk_engine/): The zero-knowledge component of the bridges.
 - [zkscript_package](./zkscript_package/): A git submodule that is used to build complex Bitcoin Scripts (zkSNARK verifiers).
 
 ## Requirements
 
 The repository requires
-1. Python >= 3.12, [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86),
-2. [Sui](https://docs.sui.io/guides/developer/getting-started) for Sui example. If you want to use the Sui localnet, you might want to install the [Sui explorer](https://github.com/suiware/sui-explorer).
-3. [Hardhat](https://hardhat.org/hardhat-runner/docs/guides/project-setup) for Ehtereum example. 
-4. [wild-bit-lab](https://github.com/nchain-innovation/wild-bit-lab) for Bitcoin SV regtest.
+1. Python >= 3.12.
+2. [Rust](https://www.rust-lang.org/tools/install) (with Cargo >= 1.86).
+3. [Sui](https://docs.sui.io/guides/developer/getting-started) for Sui. If you want to use the Sui localnet, you might want to install the [Sui explorer](https://github.com/suiware/sui-explorer).
+4. [Hardhat](https://hardhat.org/hardhat-runner/docs/guides/project-setup) for Ehtereum. 
+5. [wild-bit-lab](https://github.com/nchain-innovation/wild-bit-lab) for Bitcoin SV regtest.
 
 
 
@@ -54,114 +55,14 @@ cd zk_engine
 cargo run --release -- setup
 ```
 
+Note that this is only needed once for both bridges. The proof system is designed such that the same verification key and proving key can be used for all bridges and bridged tokens. 
+
 See also [docs/zk_engine](./docs/zk_engine.md). 
 
-If you are running Regtest, you can jump to [Quick setup with Regtest](#quick-setup-with-regtest)
 
-If you are interested in Ethereum example, you can find the instructions here [README](./evm/README.md).
+### Setting Up BSV Regtest
 
-
-### Publish Sui packages and setup sui cli
-
-> [!NOTE]
-> Before executing the following commands, ensure that your Sui client is connected to the correct network (localnet, devnet, testnet, mainnet).
-
-> [!NOTE]
-> Before executing the following command, you need to choose the block header from which the blockchain oracle will start and paste the relevant information in [`blockchain_oracle.move`](./move/oracle/sources/blockchain_oracle.move). See [docs/blockchain_oracle](./docs/blockchain_oracle.md) for more information.
-
-To publish the `blockchain_oracle` Sui package
-
-```
-cd move/oracle
-sui client publish
-```
-
-Get the Object ID of the `HeaderChain` genereted by the above command and paste it into [tcpbridge](./move/bridge/sources/tcpbridge.move#L34).
-Then, execute the following command to publish the `tcpbridge` package.
-
-> [!NOTE]
-> The bridge depends on a few configuration parameters: [`COIN_VALUE`](./move/bridge/sources/backed_pool.move#L21), [`MIN_PEGOUT_DELAY`](./move/bridge/sources/backed_pool.move#L22), [`N_CHUNKS_BURNING_TX`](./move/bridge/sources/backed_pool.move#L23). They are set up to `10`, `0`, and `4` respectively. See [docs/tcpbridge](./docs/tcpbridge.md) for their meaning in case you want to change them.
-
-
-```
-cd move/bridge
-sui client publish
-```
-
-At this point, to setup the sui cli copy (without `0x`):
-
-- the Object ID and shared version of the `HeaderChain`
-- the Package ID of `blockchain_oracle`
-- the Object ID of the `BridgeAdminCap`
-- the Object ID and shared version of the `Bridge`
-- the Package ID of `tcpbridge`
-
-and paste them in [configs.rs](./cli/sui/src/configs.rs).
-Also, fill in the path [config.rs](./cli/sui/src/configs.rs#L36) with the path to your local Sui wallet.
-Then, run
-
-```
-cd cli/sui
-cargo build
-```
-
-For documentation on the Sui packages, see [docs/blockchain_oracle](./docs/blockchain_oracle.md) and [docs/tcpbridge](./docs/tcpbridge.md).
-For documentation on the Sui cli, see [docs/sui](./docs/sui.md).
-
-## Usage
-
-If you have succesfully completed the above section, you are ready to use the bridge.
-
-### Wallet and users
-
-Create a file `wallet.json` under [./cli](./cli/).
-Use the same structure as the file [`empty_wallet.json`](./cli/empty_wallet.json) and populate the fields:
-- `name`: the name of the user
-- `bsv_wallet`: the user BSV private key in hex format
-- `sui_address`: the user Sui public address
-
-> [!NOTE]
-> Remember to always leave a user with name _issuer_.
-
-If you have some funding you wish to use, you can add them to the `funding_utxos` using the following format: for a UTXO given by `(txid, index)`, add the string
-
-```
-txid:index.to_bytes(4, "little")
-```
-
-where `index.to_bytes(4, "little")` means `index` as a 4-byte number in little endian.
-For example, the UTXO `(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, 1)` would be added as
-
-```
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:01000000
-```
-
-> [!NOTE]
-> If you are using a `regtest` environment for BSV, you can get funding from the cli. Run the command `python3 -m python_cli setup --network setup` after having added your BSV addresses to `wallet.json`.
-
-> [!NOTE]
-> If you are using a `testnet` you can get funding from the [sCrypt Faucet](https://scrypt.io/faucet).
-
-> [!NOTE]
-> You can print to screen the information contained in your wallet using the following command `python3 -m wallet_manager_ui --network <NETWORK>`, where `<NETWORK>` can be either `regtest`, `testnet`, or `mainnet`.
-
-### Setup
-
-Once you've populated `wallet.json` with your keys/addresses, and you have gotten some funding, you can set up the wallet for use.
-To do so, execute the following command
-
-```
-python3 -m python_cli setup --network <NETWORK>
-```
-
-You are now ready to use the bridge.
-For the avaiable commands, see [python_cli](./docs/python_cli.md).
-
-## Quick setup with Regtest
-
-If you are running a Regtest, then you can benefit from the auomated setup for a demo. Assuming that you have done [ZK engine setup](#zk-engine-setup) and have Sui client running, just follow the steps below.
-
-1. Locate bitcoin.conf for your regest and update [bsv_config.toml](./cli/bsv_config.toml) to make sure that the port number is the same as rpcport. If you are using [wild bit lab](https://github.com/nchain-innovation/wild-bit-lab), then it is under ```./wild-bit-lab/data/```
+1. Locate bitcoin.conf for your Regest and update [bsv_config.toml](./cli/bsv_config.toml) to make sure that the port number is the same as rpcport. If you are using [wild bit lab](https://github.com/nchain-innovation/wild-bit-lab), then it is under ```./wild-bit-lab/data/```
 
 2. Add the following line to bitcoin.conf if they do not exist.
     ```
@@ -170,38 +71,72 @@ If you are running a Regtest, then you can benefit from the auomated setup for a
 
 3. Start or restart Regtest and make sure at least 100 blocks are mined. 
 
-4. The following command will setup example wallets, publish Oracle contract, publish Bridge contract, and build a client to interact with the contracts. 
+
+> [!NOTE]
+> If you are using a `testnet` you can get funding from the [sCrypt Faucet](https://scrypt.io/faucet).
+
+> [!NOTE]
+> You can print to screen the information contained in your wallet using the following command `python3 -m wallet_manager_ui --network <NETWORK>`, where `<NETWORK>` can be either `regtest`, `testnet`, or `mainnet`.
+
+
+### Setting Up Sui Network
+you can follow the link in [Requirement 3](#requirements) or the steps below to setup Sui.
+
+1. Install Sui and a local explorer.
+    ```
+    brew install sui
+    brew install sui-explorer-local 
+    ```
+
+2. Initialise Sui. You can just press ENTER following the prompts. 
+    ```
+    sui client
+    ```
+
+3. Start Sui with facucet. 
+    ```
+    RUST_LOG="off,sui_node=info" sui start --with-faucet --force-regenesis
+    ```
+4. Run the following command to use localnet. 
+    ```
+    sui client new-env --alias local --rpc http://127.0.0.1:9000
+    sui client switch --env local
+    ```
+
+5. Start a local explorer.
+    ```
+    sui-explorer-local start
+    ```
+
+To stop Sui, press "Control + C". To stop the local explorer, ```sui-explorer-local stop```.
+
+## Sui Bridge Demo
+
+1. The following command will setup example wallets, publish Oracle contract, publish Bridge contract, and build a client to interact with the contracts. 
     ```
     cd ./cli
-    python demo_setup.py
+    python -m sui_demo setup --network regtest
     ```
-5. Now you can use python.cli to do pegin, transfer, burn, update Oracle contract, and pegout. For examples:
+2. Now you can use sui_demo.py to do pegin, transfer, burn, and pegout. For examples:
     ```
-    python -m python_cli pegin --user alice --pegin-amount 128000000000 --network regtest
+    python -m sui_demo pegin --user alice --pegin-amount 32000000000 --network regtest
 
-    python -m python_cli transfer --sender alice --receiver bob --token-index 0 --network regtest
+    python -m sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
 
-    python -m python_cli burn --user bob --token-index 0 --network regtest     
+    python -m sui_demo burn --user bob --token-index 0 --network regtest     
 
-    python -m oracle_service --block_height {genesis block height} --network regtest
-
-    python -m python_cli pegout --user bob --token-index 0 --network regtest --blockhash {blockhash of burning tx} --block_height {block height of burning tx}
-    ```
-    {genesis block height} can be obtained from the output after publishing the Oracle contract in Step 4.
-    ```
-    Publishing Oracle contract with genesis height 108...
-    ```
+    python3 -m sui_demo pegout --user bob --token-index 0 --network regtest --update
     
-    {blockhash of burning tx} and {block height of burning tx} can be obtained from the output after calling "burn".
-    ```
-    Token successfully burned at transaction 8fc55be578ba5ac0c017ff17971b2334952a95483ee3f233b6d3f53c2db270d5 
-    block height 112 
-    block hash 0b552c27ce22950ceedc124b013a772274600fd0f0ab708068b403d3c79a4882
-    ```
+    ```  
 
-6. After "pegout", you should be able to see that the user has received 128 sui from a Sui explorer.
+3. After "pegout", you should be able to see that the user Bob has received 32 sui from a Sui explorer by search his Sui address.
 
-7. You can always restart from step 4 at any time. 
+You can always restart from the begining at any time. 
+
+
+## Ethereum Bridge Demo
+
+To check out Ethereum bridge on local networks, click here [README](./evm/README.md).
 
 
 ## License
