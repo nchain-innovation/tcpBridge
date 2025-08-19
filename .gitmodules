@@ -1,5 +1,0 @@
-[submodule "zkscript_package"]
-	path = zkscript_package
-	url = https://github.com/nchain-innovation/zkscript_package.git
-	branch = perf/reduce-groth16proj-86
-	ignore = dirty
