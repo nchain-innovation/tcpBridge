@@ -59,9 +59,13 @@ _check_npm:
 		exit 1; \
 	fi
 	@echo "NPM location OK"
+_check_brew:
+	@echo "Checking Homebrew..."
+	@command -v brew >/dev/null || (echo >&2 "Homebrew not found"; exit 1)
+	@echo "Homebrew OK"
 
 # Check all dependencies
-_check: _check_python _check_cargo _check_node _check_npm ## Check all dependencies
+_check: _check_python _check_cargo _check_node _check_npm _check_brew ## Check all dependencies
 	@echo "Dependencies up to date"
 
 # Create virtual environment
@@ -136,8 +140,19 @@ eth_demo: _check _venv _submodules start_regtest install_node start_eth ## ETH t
 	@$(PYTHON) -m cli/evm_demo pegout
 	@echo "SUI-BSV bridge demo completed"
 
-start_sui: ## Start the SUI environment
+start_sui: ## Start local Sui node and explorer
 	@echo "Setting up SUI environment..."
+	@PATH="$(HOME)/.cargo/bin:$$PATH" \
+	RUST_LOG="off,sui_node=info" \
+	sui start --with-faucet --force-regenesis > sui.log 2>&1 & \
+	echo $$! > sui.pid
+	@sleep 5
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client new-env --alias local --rpc http://127.0.0.1:9000
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client switch --env local
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client active-address
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client faucet
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui-explorer-local start > explorer.log 2>&1 &
+	@echo "SUI environment ready"
 
 
 start_eth: ## Start the ETH environment
@@ -178,7 +193,7 @@ start_regtest: ## Start the regtest environment
 	@echo "BitcoinSV regtest ready"
 
 
-clean: _light_clean ## Remove virtualenv, reset submodules, stop WildBitLab
+clean: _light_clean ## Remove virtualenv, reset submodules, stop WildBitLab, stop Hardhat node
 	@echo "Clean complete"
 
 _light_clean: ## Equivalent to the clean command
@@ -206,6 +221,17 @@ _light_clean: ## Equivalent to the clean command
 		rm -f hardhat-node.pid; \
 		rm -f hardhat-node.log; \
 	fi
+	
+	@echo "Stopping SUI node..."
+	@if [ -f sui.pid ]; then \
+		PID=$$(cat sui.pid); \
+		if kill -0 $$PID 2>/dev/null; then \
+			kill $$PID; \
+		fi; \
+		rm -f sui.pid; \
+	fi
+	@echo "Stopping Sui explorer...";
+	@sui-explorer-local stop
 
 
 deep_clean: _light_clean ## Remove virtualenv, reset submodules, and clean Rust artifacts
