@@ -22,23 +22,22 @@ fi
 endef
 
 
-# Setup
 setup: _check _venv _submodules _deps _zk_engine_setup ## Set up the environment, the dependencies, and the zk_engine
 	@echo "Setup complete"
 
-_check_python:
+_check_python: ## Check Python version
 	@echo "Checking Python..."
 	@command -v python3 >/dev/null || (echo >&2 "Python3 not found"; exit 1)
 	@python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)' \
 		|| (echo >&2 "Python version < 3.12"; exit 1)
 	@echo "Python version OK"
 
-_check_cargo:
+_check_cargo: ## Check Cargo version
 	@echo "Checking Cargo..."
 	@command -v cargo >/dev/null || (echo >&2 "Cargo not found"; exit 1)
 	$(call check_version,cargo -V | awk '{print $$2}' | awk -F. '{print $$1 "." $$2}',1.86,Cargo)
 
-_check_node:
+_check_node: ## Check Node.js version and location
 	@echo "Checking Node.js version..."
 	@command -v node >/dev/null || (echo >&2 "Node.js not found"; exit 1)
 	$(call check_version,node -v | cut -d. -f1 | cut -c2-,22,Node.js)
@@ -49,7 +48,7 @@ _check_node:
 	fi
 	@echo "Node.js location OK"
 
-_check_npm:
+_check_npm: ## Check NPM version and location
 	@echo "Checking NPM version..."
 	@command -v npm >/dev/null || (echo >&2 "NPM not found"; exit 1)
 	$(call check_version,npm -v | cut -d. -f1,7,NPM)
@@ -59,16 +58,15 @@ _check_npm:
 		exit 1; \
 	fi
 	@echo "NPM location OK"
-_check_brew:
+
+_check_brew: ## Check Homebrew installation
 	@echo "Checking Homebrew..."
 	@command -v brew >/dev/null || (echo >&2 "Homebrew not found"; exit 1)
 	@echo "Homebrew OK"
 
-# Check all dependencies
 _check: _check_python _check_cargo _check_node _check_npm _check_brew ## Check all dependencies
 	@echo "Dependencies up to date"
 
-# Create virtual environment
 _venv: ## Create a Python virtual environment if not present
 	@echo "Checking for virtual environment..."
 	@if [ ! -d "$(VENV)" ]; then \
@@ -78,13 +76,11 @@ _venv: ## Create a Python virtual environment if not present
 		echo "Virtual environment already exists"; \
 	fi
 
-# Git submodule initialization
 _submodules: ## Initialize and update git submodules
 	@echo "Updating git submodules..."
 	@git submodule update --init --recursive
 	@git submodule update --remote
 
-# Install dependencies (main + submodules)
 _deps: _venv ## Install Python dependencies
 	@echo "Installing dependencies..."
 	@$(PIP) install --upgrade pip
@@ -93,12 +89,11 @@ _deps: _venv ## Install Python dependencies
 	@echo "Installing CLI dependencies..."
 	@$(PIP) install -r cli/requirements.txt
 
-# Setup zk_engine
 _zk_engine_setup: _deps ## Run zk_engine setup
 	@echo "Setting up zk_engine..."
 	@(cd zk_engine && cargo run --release -- setup)
 
-sui_demo: _check _venv _submodules start_regtest start_sui ## SUI to BSV bridge demo
+sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridge demo
 	@echo "Setting up the environment..."
 	@$(PYTHON) -m cli/sui_demo setup --network regtest
 	@echo "Setup completed"
@@ -119,7 +114,7 @@ sui_demo: _check _venv _submodules start_regtest start_sui ## SUI to BSV bridge 
 	@$(PYTHON) -m cli/sui_demo pegout --user bob --token-index 0 --network regtest --update
 	@echo "SUI-BSV bridge demo completed"
 
-eth_demo: _check _venv _submodules start_regtest install_node start_eth ## ETH to BSV bridge demo
+eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridge demo
 	@echo "Setting up the environment..."
 	@$(PYTHON) -m cli/evm_demo setup 
 	@echo "Setup completed"
@@ -140,7 +135,7 @@ eth_demo: _check _venv _submodules start_regtest install_node start_eth ## ETH t
 	@$(PYTHON) -m cli/evm_demo pegout
 	@echo "SUI-BSV bridge demo completed"
 
-start_sui: ## Start local Sui node and explorer
+_start_sui: ## Start local SUI environment
 	@echo "Setting up SUI environment..."
 	@PATH="$(HOME)/.cargo/bin:$$PATH" \
 	RUST_LOG="off,sui_node=info" \
@@ -155,7 +150,7 @@ start_sui: ## Start local Sui node and explorer
 	@echo "SUI environment ready"
 
 
-start_eth: ## Start the ETH environment
+_start_eth: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
 	@cd evm && npm install --save-dev hardhat >/dev/null
@@ -163,7 +158,7 @@ start_eth: ## Start the ETH environment
 	@echo $$! > hardhat-node.pid
 	@echo "ETH environment ready"
 
-start_regtest: ## Start the regtest environment
+_start_regtest: ## Start the regtest environment
 	@echo "Setting up Bitcoin SV regtest..."
 	@if [ ! -d "$(REGTEST_DIR)" ]; then \
 		echo "Cloning WildBitLab..."; \
@@ -193,7 +188,7 @@ start_regtest: ## Start the regtest environment
 	@echo "BitcoinSV regtest ready"
 
 
-clean: _light_clean ## Remove virtualenv, reset submodules, stop WildBitLab, stop Hardhat node
+clean: _light_clean ## Remove virtualenv and temporary files, reset submodules, stop blockchain nodes
 	@echo "Clean complete"
 
 _light_clean: ## Equivalent to the clean command
@@ -234,7 +229,7 @@ _light_clean: ## Equivalent to the clean command
 	@sui-explorer-local stop
 
 
-deep_clean: _light_clean ## Remove virtualenv, reset submodules, and clean Rust artifacts
+deep_clean: _light_clean ## Clean and remove Rust artifacts
 	@echo "Cleaning Rust artifacts..."
 	@(cd zk_engine && cargo clean)
 	@echo "Clean complete"
@@ -247,4 +242,4 @@ help: ## Show the list of targets
 
 help_hidden: ## Show the list of hidden targets
 	@echo "Available targets:"
-	@grep -E '^[_][a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
