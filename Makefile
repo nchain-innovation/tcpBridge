@@ -6,52 +6,82 @@ PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 REGTEST_DIR = ./wild-bit-lab
 REGTEST_CONF = $(REGTEST_DIR)/data/bitcoin.conf
+PAUSE = @printf "Press Enter to continue the demo..."; read _
+
+# Helper function to check version
+define check_version
+@CUR=$$($(1)); \
+REQ="$(2)"; \
+CUR_NUM=$$(echo $$CUR | awk -F. '{print $$1*1000 + $$2}'); \
+REQ_NUM=$$(echo $$REQ | awk -F. '{print $$1*1000 + $$2}'); \
+if [ $$CUR_NUM -lt $$REQ_NUM ]; then \
+	echo >&2 "$(3) version too old: $$CUR (need >= $$REQ)"; exit 1; \
+else \
+	echo "$(3) version OK"; \
+fi
+endef
+
 
 # Setup
-setup: checks venv submodules deps zk_engine_setup ## Set up the environment, the dependencies, and the zk_engine
-	@echo "Setup complete."
+setup: _check _venv _submodules _deps _zk_engine_setup ## Set up the environment, the dependencies, and the zk_engine
+	@echo "Setup complete"
 
-# Check for python3, cargo
-checks: ## Check for Python, Cargo, and blockchain-specific software
-	@echo "Checking for Python..."
-	@command -v python3 >/dev/null	
-	@python3 -c 'import sys; sys.version_info >= (3,12) or (print("Python version < 3.12.", file=sys.stderr), exit(1))'
+_check_python:
+	@echo "Checking Python..."
+	@command -v python3 >/dev/null || (echo >&2 "Python3 not found"; exit 1)
+	@python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)' \
+		|| (echo >&2 "Python version < 3.12"; exit 1)
 	@echo "Python version OK"
 
-	@echo "Checking for Cargo..."
-	@command -V cargo >/dev/null
-	@CARGO_VER=$$(cargo -V | cut -d" " -f2 | cut -d. -f1,2); \
-	REQUIRED="1.86"; \
-	if [ "$$(printf '%s\n%s\n' "$$CARGO_VER" "$$REQUIRED" | sort -V | head -n1)" != "$$REQUIRED" ]; then \
-		echo >&2 "Cargo version < 1.86."; exit 1; \
+_check_cargo:
+	@echo "Checking Cargo..."
+	@command -v cargo >/dev/null || (echo >&2 "Cargo not found"; exit 1)
+	$(call check_version,cargo -V | awk '{print $$2}' | awk -F. '{print $$1 "." $$2}',1.86,Cargo)
+
+_check_node:
+	@echo "Checking Node.js version..."
+	@command -v node >/dev/null || (echo >&2 "Node.js not found"; exit 1)
+	$(call check_version,node -v | cut -d. -f1 | cut -c2-,22,Node.js)
+	@echo "Checking Node.js location..."
+	@if echo "$$(which node)" | grep -q "/mnt/"; then \
+		echo >&2 "Node.js is installed in /mnt (Windows side). Please install inside WSL/macOS/Linux"; \
+		exit 1; \
 	fi
-	@echo "Cargo version OK"
+	@echo "Node.js location OK"
 
-	@echo "Checking for Sui CLI..."
-	@command -v sui >/dev/null 2>&1 || echo "Warning: Sui CLI not found."
-	
-	@echo "Checking for Hardhat..."
-	@command -v hardhat >/dev/null 2>&1 || echo "Warning: Hardhat not found."
+_check_npm:
+	@echo "Checking NPM version..."
+	@command -v npm >/dev/null || (echo >&2 "NPM not found"; exit 1)
+	$(call check_version,npm -v | cut -d. -f1,7,NPM)
+	@echo "Checking NPM location..."
+	@if echo "$$(which npm)" | grep -q "/mnt/"; then \
+		echo >&2 "NPM is installed in /mnt (Windows side). Please install inside WSL/macOS/Linux"; \
+		exit 1; \
+	fi
+	@echo "NPM location OK"
 
+# Check all dependencies
+_check: _check_python _check_cargo _check_node _check_npm ## Check all dependencies
+	@echo "Dependencies up to date"
 
 # Create virtual environment
-venv: ## Create a Python virtual environment if not present
+_venv: ## Create a Python virtual environment if not present
 	@echo "Checking for virtual environment..."
 	@if [ ! -d "$(VENV)" ]; then \
 		echo "Creating virtual environment..."; \
 		python3 -m venv $(VENV); \
 	else \
-		echo "Virtual environment already exists."; \
+		echo "Virtual environment already exists"; \
 	fi
 
 # Git submodule initialization
-submodules: ## Initialize and update git submodules
+_submodules: ## Initialize and update git submodules
 	@echo "Updating git submodules..."
 	@git submodule update --init --recursive
 	@git submodule update --remote
 
 # Install dependencies (main + submodules)
-deps: venv ## Install Python dependencies
+_deps: _venv ## Install Python dependencies
 	@echo "Installing dependencies..."
 	@$(PIP) install --upgrade pip
 	@echo "Installing zkscript_package dependencies..."
@@ -60,45 +90,80 @@ deps: venv ## Install Python dependencies
 	@$(PIP) install -r cli/requirements.txt
 
 # Setup zk_engine
-zk_engine_setup: deps ## Run zk_engine setup
+_zk_engine_setup: _deps ## Run zk_engine setup
 	@echo "Setting up zk_engine..."
 	@(cd zk_engine && cargo run --release -- setup)
 
-# Run demo
+sui_demo: _check _venv _submodules start_regtest start_sui ## SUI to BSV bridge demo
+	@echo "Setting up the environment..."
+	@$(PYTHON) -m cli/sui_demo setup --network regtest
+	@echo "Setup completed"
+	$(PAUSE)
+	@echo "Pegging-in..."
+	@$(PYTHON) -m cli/sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest
+	@echo "Peg-in completed"
+	$(PAUSE)
+	@echo "Transferring token..."
+	@$(PYTHON) -m cli/sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
+	@echo "Token transfer completed"
+	$(PAUSE)
+	@echo "Burning token..."
+	@$(PYTHON) -m cli/sui_demo burn --user bob --token-index 0 --network regtest
+	@echo "Token burned"
+	$(PAUSE)
+	@echo "Pegging-out..."
+	@$(PYTHON) -m cli/sui_demo pegout --user bob --token-index 0 --network regtest --update
+	@echo "SUI-BSV bridge demo completed"
 
-sui_demo: checks venv submodules start_regtest start_sui ## SUI to BSV bridge demo
-	@echo "Demo completed."
-
-eth_demo: checks venv submodules start_regtest start_eth ## ETH to BSV bridge demo
-	@echo "Demo completed."
+eth_demo: _check _venv _submodules start_regtest install_node start_eth ## ETH to BSV bridge demo
+	@echo "Setting up the environment..."
+	@$(PYTHON) -m cli/evm_demo setup 
+	@echo "Setup completed"
+	$(PAUSE)
+	@echo "Pegging-in..."
+	@$(PYTHON) -m cli/evm_demo pegin --user alice --pegin-amount 10 --network regtest
+	@echo "Peg-in completed"
+	$(PAUSE)
+	@echo "Transferring token..."
+	@$(PYTHON) -m cli/evm_demo transfer --sender alice --reeiver bob --token-index 0 --network regtest
+	@echo "Token transfer completed"
+	$(PAUSE)
+	@echo "Burning token..."
+	@$(PYTHON) -m cli/evm_demo burn --user bob --token-index 0 --network regtest
+	@echo "Token burned"
+	$(PAUSE)
+	@echo "Pegging-out..."
+	@$(PYTHON) -m cli/evm_demo pegout
+	@echo "SUI-BSV bridge demo completed"
 
 start_sui: ## Start the SUI environment
 	@echo "Setting up SUI environment..."
 
+
 start_eth: ## Start the ETH environment
 	@echo "Setting up ETH environment..."
+	@cd evm && npm init -y >/dev/null
+	@cd evm && npm install --save-dev hardhat >/dev/null
+	@cd evm && nohup npx hardhat node > ../hardhat-node.log 2>&1 &
+	@echo $$! > hardhat-node.pid
+	@echo "ETH environment ready"
 
 start_regtest: ## Start the regtest environment
-start_regtest: ## Start the regtest environment
 	@echo "Setting up Bitcoin SV regtest..."
-	@echo "Checking if WildBitLab is already running..."
-	@if ! nc -z 127.0.0.1 18332 2>/dev/null; then \
-		echo "WildBitLab is not running. Starting it now..."; \
-		if [ ! -d "$(REGTEST_DIR)" ]; then \
-			echo "Cloning WildBitLab..."; \
-			git clone https://github.com/nchain-innovation/wild-bit-lab.git; \
-		fi; \
-		if ! grep -q '^maxscriptsizepolicy=100000000' $(REGTEST_CONF); then \
-			echo "Updating regtest configuration..."; \
-			echo 'maxscriptsizepolicy=100000000' >> $(REGTEST_CONF); \
-		fi; \
-		echo "Starting WildBitLab in the background..."; \
-		(cd $(REGTEST_DIR) && nohup docker compose --file three-node.yml up > ../regtest.log 2>&1 &); \
-		while ! nc -z 127.0.0.1 18332 2>/dev/null; do \
-			echo "Waiting for Bitcoin node to be ready..."; \
-			sleep 5; \
-		done; \
-	fi
+	@if [ ! -d "$(REGTEST_DIR)" ]; then \
+		echo "Cloning WildBitLab..."; \
+		git clone https://github.com/nchain-innovation/wild-bit-lab.git; \
+	fi;
+	@if ! grep -q '^maxscriptsizepolicy=100000000' $(REGTEST_CONF); then \
+		echo "Updating regtest configuration..."; \
+		echo 'maxscriptsizepolicy=100000000' >> $(REGTEST_CONF); \
+	fi;
+	@echo "Starting WildBitLab in the background...";
+	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml up -d > ../regtest.log 2>&1 &);
+	@while ! nc -z 127.0.0.1 18332 2>/dev/null; do \
+		echo "Waiting for Bitcoin node to be ready..."; \
+		sleep 5; \
+	done;
 	@echo "Mining 100 blocks..."
 	@sleep 5
 	@{ \
@@ -110,13 +175,13 @@ start_regtest: ## Start the regtest environment
 			--data-binary '{"jsonrpc":"1.0","id":"curltest","method":"generatetoaddress","params":[100, "'"$$ADDRESS"'"]}' \
 			-H 'content-type: text/plain;' http://127.0.0.1:18332; \
 	}
-	@echo "BitcoinSV regtest ready."
+	@echo "BitcoinSV regtest ready"
 
 
 clean: _light_clean ## Remove virtualenv, reset submodules, stop WildBitLab
-	@echo "Clean complete."
+	@echo "Clean complete"
 
-_light_clean: 
+_light_clean: ## Equivalent to the clean command
 	@echo "Cleaning up..."
 	@if [ -d "$(VENV)" ]; then \
 		echo "Removing virtual environment..."; \
@@ -125,22 +190,35 @@ _light_clean:
 	@echo "Resetting Git submodules..."
 	@git submodule foreach -q --recursive 'echo "- Resetting $$name"; (git reset --hard && git clean -fdx) > /dev/null'
 
-	@if nc -z 127.0.0.1 18332 2>/dev/null; then \
-		echo "Stopping WildBitLab containers..."; \
-		docker compose -p wildbitlab -f $(REGTEST_DIR)/three-node.yml down; \
-	fi
-
 	@if [ -d "wild-bit-lab" ]; then \
+		echo "Stopping WildBitLab containers..."; \
+		(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml down --remove-orphans > ../regtest.log 2>&1 &); \
 		echo "Removing WildBitLab folder..."; \
 		rm -rf wild-bit-lab; \
 	fi
 
+	@echo "Stopping Hardhat node..."
+	@if [ -f hardhat-node.pid ]; then \
+		PID=$$(cat hardhat-node.pid); \
+		if kill -0 $$PID 2>/dev/null; then \
+			kill $$PID; \
+		fi; \
+		rm -f hardhat-node.pid; \
+		rm -f hardhat-node.log; \
+	fi
+
+
 deep_clean: _light_clean ## Remove virtualenv, reset submodules, and clean Rust artifacts
 	@echo "Cleaning Rust artifacts..."
 	@(cd zk_engine && cargo clean)
-	@echo "Clean complete."
+	@echo "Clean complete"
 
 
-help: ## Show this help message
+help: ## Show the list of targets
 	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z][a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+
+help_hidden: ## Show the list of hidden targets
+	@echo "Available targets:"
+	@grep -E '^[_][a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
