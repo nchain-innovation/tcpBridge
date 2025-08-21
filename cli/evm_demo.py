@@ -75,6 +75,9 @@ def setup_wallets(network):
             "localhost",
         ],
         cwd="../evm",
+        capture_output=True,
+        text=True,
+        check=True
     )
     wallets = generate_wallets(users, network)
 
@@ -432,6 +435,7 @@ def main():
 
     # Load wallet
     config = load_config("bsv_config.toml")
+    print(config)
     bsv_client = interface_factory.set_config(config["bsv_client"])
 
     # Dispatch commands

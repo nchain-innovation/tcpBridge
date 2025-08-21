@@ -90,33 +90,35 @@ _deps: _venv ## Install Python dependencies
 	@$(PIP) install -r cli/requirements.txt
 
 _zk_engine_setup: _deps ## Run zk_engine setup
-	@echo "Setting up zk_engine..."
-	@(cd zk_engine && cargo run --release -- setup)
+	@if [ ! -d "zk_engine/data/pob_engine/keys" ] || [ ! -d "zk_engine/data/tcp_engine/keys" ]; then \
+		echo "Setting up zk_engine..."; \
+		(cd zk_engine && cargo run --release -- setup); \
+	fi
 
 sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridge demo
 	@echo "Setting up the environment..."
-	@$(PYTHON) -m cli/sui_demo setup --network regtest
+	@$(PYTHON) -m cli.sui_demo setup --network regtest
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
-	@$(PYTHON) -m cli/sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest
+	@$(PYTHON) -m cli.sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest
 	@echo "Peg-in completed"
 	$(PAUSE)
 	@echo "Transferring token..."
-	@$(PYTHON) -m cli/sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
+	@$(PYTHON) -m cli.sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
 	@echo "Token transfer completed"
 	$(PAUSE)
 	@echo "Burning token..."
-	@$(PYTHON) -m cli/sui_demo burn --user bob --token-index 0 --network regtest
+	@$(PYTHON) -m cli.sui_demo burn --user bob --token-index 0 --network regtest
 	@echo "Token burned"
 	$(PAUSE)
 	@echo "Pegging-out..."
-	@$(PYTHON) -m cli/sui_demo pegout --user bob --token-index 0 --network regtest --update
+	@$(PYTHON) -m cli.sui_demo pegout --user bob --token-index 0 --network regtest --update
 	@echo "SUI-BSV bridge demo completed"
 
 eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridge demo
 	@echo "Setting up the environment..."
-	@$(PYTHON) -m cli/evm_demo setup 
+	@(cd cli && ../$(PYTHON) -m evm_demo setup)
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
@@ -142,7 +144,8 @@ _start_sui: ## Start local SUI environment
 	sui start --with-faucet --force-regenesis > sui.log 2>&1 & \
 	echo $$! > sui.pid
 	@sleep 5
-	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client new-env --alias local --rpc http://127.0.0.1:9000
+	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client envs | grep -q local \
+	  || PATH="$(HOME)/.cargo/bin:$$PATH" sui client new-env --alias local --rpc http://127.0.0.1:9000
 	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client switch --env local
 	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client active-address
 	@PATH="$(HOME)/.cargo/bin:$$PATH" sui client faucet
@@ -153,7 +156,8 @@ _start_sui: ## Start local SUI environment
 _start_eth: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
-	@cd evm && npm install --save-dev hardhat >/dev/null
+	@cd evm && npm install --save-dev hardhat@2.26.3 @nomicfoundation/hardhat-toolbox-viem >/dev/null
+	@cd evm && npm pkg set type="module"
 	@cd evm && nohup npx hardhat node > ../hardhat-node.log 2>&1 &
 	@echo $$! > hardhat-node.pid
 	@echo "ETH environment ready"
@@ -188,15 +192,10 @@ _start_regtest: ## Start the regtest environment
 	@echo "BitcoinSV regtest ready"
 
 
-clean: _light_clean ## Remove virtualenv and temporary files, reset submodules, stop blockchain nodes
+clean: _light_clean ## Remove temporary files, reset submodules, stop blockchain nodes
 	@echo "Clean complete"
 
 _light_clean: ## Equivalent to the clean command
-	@echo "Cleaning up..."
-	@if [ -d "$(VENV)" ]; then \
-		echo "Removing virtual environment..."; \
-		rm -rf $(VENV); \
-	fi
 	@echo "Resetting Git submodules..."
 	@git submodule foreach -q --recursive 'echo "- Resetting $$name"; (git reset --hard && git clean -fdx) > /dev/null'
 
@@ -229,7 +228,12 @@ _light_clean: ## Equivalent to the clean command
 	@sui-explorer-local stop
 
 
-deep_clean: _light_clean ## Clean and remove Rust artifacts
+deep_clean: _light_clean ## Clean and remove Rust artifacts, remove virtual environment
+	@echo "Cleaning up..."
+	@if [ -d "$(VENV)" ]; then \
+		echo "Removing virtual environment..."; \
+		rm -rf $(VENV); \
+	fi
 	@echo "Cleaning Rust artifacts..."
 	@(cd zk_engine && cargo clean)
 	@echo "Clean complete"
