@@ -122,19 +122,19 @@ eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridg
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
-	@$(PYTHON) -m cli/evm_demo pegin --user alice --pegin-amount 10 --network regtest
+	@(cd cli && ../$(PYTHON) -m evm_demo pegin --user alice --pegin-amount 10 --network regtest)
 	@echo "Peg-in completed"
 	$(PAUSE)
 	@echo "Transferring token..."
-	@$(PYTHON) -m cli/evm_demo transfer --sender alice --reeiver bob --token-index 0 --network regtest
+	@(cd cli && ../$(PYTHON) -m evm_demo transfer --sender alice --reeiver bob --token-index 0 --network regtest)
 	@echo "Token transfer completed"
 	$(PAUSE)
 	@echo "Burning token..."
-	@$(PYTHON) -m cli/evm_demo burn --user bob --token-index 0 --network regtest
+	@(cd cli && ../$(PYTHON) -m evm_demo burn --user bob --token-index 0 --network regtest)
 	@echo "Token burned"
 	$(PAUSE)
 	@echo "Pegging-out..."
-	@$(PYTHON) -m cli/evm_demo pegout
+	@(cd cli && ../$(PYTHON) -m evm_demo pegout)
 	@echo "SUI-BSV bridge demo completed"
 
 _start_sui: ## Start local SUI environment
