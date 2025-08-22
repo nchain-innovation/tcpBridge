@@ -156,8 +156,8 @@ _start_sui: ## Start local SUI environment
 _start_eth: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
-	@cd evm && npm install --save-dev hardhat@2.26.3 @nomicfoundation/hardhat-toolbox-viem >/dev/null
-	@cd evm && npm pkg set type="module"
+	@cd evm && npm install --save-dev hardhat@2.26.3 typescript ts-node @nomicfoundation/hardhat-toolbox-viem@4.1.0 >/dev/null
+# 	@cd evm && npm pkg set type="module"
 	@cd evm && nohup npx hardhat node > ../hardhat-node.log 2>&1 &
 	@echo $$! > hardhat-node.pid
 	@echo "ETH environment ready"
@@ -176,10 +176,10 @@ _start_regtest: ## Start the regtest environment
 	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml up -d > ../regtest.log 2>&1 &);
 	@while ! nc -z 127.0.0.1 18332 2>/dev/null; do \
 		echo "Waiting for Bitcoin node to be ready..."; \
-		sleep 5; \
+		sleep 2; \
 	done;
 	@echo "Mining 100 blocks..."
-	@sleep 5
+	@sleep 2
 	@{ \
 		ADDRESS=$$(curl -s --user bitcoin:bitcoin \
 			--data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getnewaddress"}' \
