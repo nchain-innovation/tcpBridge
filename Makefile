@@ -156,8 +156,7 @@ _start_sui: ## Start local SUI environment
 _start_eth: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
-	@cd evm && npm install --save-dev hardhat@2.26.3 typescript ts-node @nomicfoundation/hardhat-toolbox-viem@4.1.0 >/dev/null
-# 	@cd evm && npm pkg set type="module"
+	@cd evm && npm install --save-dev hardhat@2.26.3 typescript ts-node @nomicfoundation/hardhat-ethers@3.0.8 ethers @nomicfoundation/hardhat-toolbox-viem@4.1.0 >/dev/null
 	@cd evm && nohup npx hardhat node > ../hardhat-node.log 2>&1 &
 	@echo $$! > hardhat-node.pid
 	@echo "ETH environment ready"
@@ -225,7 +224,7 @@ _light_clean: ## Equivalent to the clean command
 		rm -f sui.pid; \
 	fi
 	@echo "Stopping Sui explorer...";
-	@sui-explorer-local stop
+	@sui-explorer-local stop > /dev/null 2>&1 || true
 
 
 deep_clean: _light_clean ## Clean and remove Rust artifacts, remove virtual environment
