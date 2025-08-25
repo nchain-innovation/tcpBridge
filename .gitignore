@@ -21,6 +21,7 @@ proofs/
 *_bsv_wallet.json
 info.json
 /evm/*.json
+!/evm/tsconfig.json
 /evm/*.txt
 
 # Hardhat files
