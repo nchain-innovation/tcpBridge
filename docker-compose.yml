@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  bridge-demo:
+    image: bridge-demo
+    build: .
+    container_name: bridge-demo
+    stdin_open: true
+    tty: true
+    network_mode: "host"       # Use host network for nodes
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Access host Docker for wild-bit-lab
+    working_dir: /app
+    entrypoint: ["make"]       # Default entrypoint runs Make targets
+    command: ["help"]          # Default target if none is passed

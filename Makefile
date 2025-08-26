@@ -6,7 +6,12 @@ PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 REGTEST_DIR = ./wild-bit-lab
 REGTEST_CONF = $(REGTEST_DIR)/data/bitcoin.conf
-PAUSE = @printf "Press Enter to continue the demo..."; read _
+PAUSE = @printf "Press Enter to continue, anything else to stop... "; \
+	read -n 1 key; echo ""; \
+	if [ "$$key" != "" ]; then \
+		echo "Aborted."; \
+		exit 1; \
+	fi
 
 # Helper function to check version
 define check_version
@@ -171,9 +176,6 @@ _start_regtest: ## Start the regtest environment
 	@if ! grep -q '^maxscriptsizepolicy=100000000' $(REGTEST_CONF); then \
 		echo 'maxscriptsizepolicy=100000000' >> $(REGTEST_CONF); \
 	fi;
-	@if ! grep -q '^block-time=10' $(REGTEST_CONF); then \
-		echo 'block-time=10' >> $(REGTEST_CONF); \
-	fi;
 	@echo "Starting WildBitLab in the background...";
 	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml up -d > ../regtest.log 2>&1 &);
 	@while ! nc -z 127.0.0.1 18332 2>/dev/null; do \
@@ -230,7 +232,7 @@ _light_clean: ## Equivalent to the clean command
 	@sui-explorer-local stop > /dev/null 2>&1 || true
 
 
-deep_clean: _light_clean ## Clean and remove Rust artifacts, remove virtual environment
+deep_clean: _light_clean ## Reset the git repository to its original state
 	@echo "Cleaning up..."
 	@if [ -d "$(VENV)" ]; then \
 		echo "Removing virtual environment..."; \
@@ -238,6 +240,10 @@ deep_clean: _light_clean ## Clean and remove Rust artifacts, remove virtual envi
 	fi
 	@echo "Cleaning Rust artifacts..."
 	@(cd zk_engine && cargo clean)
+	@echo "Resetting Git repository..."
+	$(PAUSE)
+	@git reset --hard HEAD
+	@git clean -fdx
 	@echo "Clean complete"
 
 
