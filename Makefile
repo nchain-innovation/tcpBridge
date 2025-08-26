@@ -101,7 +101,7 @@ sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridg
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
-	@(cd cle && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest)
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest)
 	@echo "Peg-in completed"
 	$(PAUSE)
 	@echo "Transferring token..."
