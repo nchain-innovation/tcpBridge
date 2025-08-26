@@ -1,6 +1,7 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:22.04
 
-# Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install base dependencies
@@ -10,12 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs npm \
     cargo \
     netcat \
+    docker.io docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure python3 points to 3.12
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 
-# Install Rust and Cargo (latest stable via rustup, overrides apt cargo if needed)
+# Install Rust via rustup
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
@@ -29,7 +31,7 @@ WORKDIR /app
 # Copy repo into container
 COPY . .
 
-# Setup Python virtual environment + deps
+# Setup Python venv and dependencies
 RUN python3 -m venv venv \
     && ./venv/bin/pip install --upgrade pip \
     && ./venv/bin/pip install -r zkscript_package/requirements.txt \
@@ -38,8 +40,17 @@ RUN python3 -m venv venv \
 # Build zk_engine
 RUN cd zk_engine && cargo build --release
 
-# Install Hardhat globally (ETH environment)
-RUN npm install -g hardhat
+# Install pinned ETH dev dependencies globally
+RUN npm install -g \
+    hardhat@2.26.3 \
+    typescript@5.3.0 \
+    ts-node@10.9.1 \
+    @nomicfoundation/hardhat-ethers@3.0.8 \
+    ethers@6.9.0 \
+    @nomicfoundation/hardhat-toolbox-viem@4.1.0
 
-# Default command: show available demos
-CMD [ "make", "help" ]
+# Default entrypoint: run Make targets
+ENTRYPOINT ["make"]
+
+# Default command if nothing is passed: show help
+CMD ["help"]
