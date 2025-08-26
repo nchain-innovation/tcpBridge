@@ -97,45 +97,45 @@ _zk_engine_setup: _deps ## Run zk_engine setup
 
 sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridge demo
 	@echo "Setting up the environment..."
-	@$(PYTHON) -m cli.sui_demo setup --network regtest
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo setup --network regtest)
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
-	@$(PYTHON) -m cli.sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest
+	@(cd cle && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest)
 	@echo "Peg-in completed"
 	$(PAUSE)
 	@echo "Transferring token..."
-	@$(PYTHON) -m cli.sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest)
 	@echo "Token transfer completed"
 	$(PAUSE)
 	@echo "Burning token..."
-	@$(PYTHON) -m cli.sui_demo burn --user bob --token-index 0 --network regtest
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo burn --user bob --token-index 0 --network regtest)
 	@echo "Token burned"
 	$(PAUSE)
 	@echo "Pegging-out..."
-	@$(PYTHON) -m cli.sui_demo pegout --user bob --token-index 0 --network regtest --update
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegout --user bob --token-index 0 --network regtest --update)
 	@echo "SUI-BSV bridge demo completed"
 
 eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridge demo
 	@echo "Setting up the environment..."
-	@(cd cli && ../$(PYTHON) -m evm_demo setup)
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo setup)
 	@echo "Setup completed"
 	$(PAUSE)
 	@echo "Pegging-in..."
-	@(cd cli && ../$(PYTHON) -m evm_demo pegin --user alice --pegin-amount 10 --network regtest)
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo pegin --user alice --pegin-amount 10 --network regtest)
 	@echo "Peg-in completed"
 	$(PAUSE)
 	@echo "Transferring token..."
-	@(cd cli && ../$(PYTHON) -m evm_demo transfer --sender alice --reeiver bob --token-index 0 --network regtest)
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo transfer --sender alice --receiver bob --token-index 0 --network regtest)
 	@echo "Token transfer completed"
 	$(PAUSE)
 	@echo "Burning token..."
-	@(cd cli && ../$(PYTHON) -m evm_demo burn --user bob --token-index 0 --network regtest)
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo burn --user bob --token-index 0 --network regtest)
 	@echo "Token burned"
 	$(PAUSE)
 	@echo "Pegging-out..."
-	@(cd cli && ../$(PYTHON) -m evm_demo pegout)
-	@echo "SUI-BSV bridge demo completed"
+	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo pegout)
+	@echo "ETH-BSV bridge demo completed"
 
 _start_sui: ## Start local SUI environment
 	@echo "Setting up SUI environment..."
@@ -167,9 +167,12 @@ _start_regtest: ## Start the regtest environment
 		echo "Cloning WildBitLab..."; \
 		git clone https://github.com/nchain-innovation/wild-bit-lab.git; \
 	fi;
+	@echo "Updating regtest configuration...";
 	@if ! grep -q '^maxscriptsizepolicy=100000000' $(REGTEST_CONF); then \
-		echo "Updating regtest configuration..."; \
 		echo 'maxscriptsizepolicy=100000000' >> $(REGTEST_CONF); \
+	fi;
+	@if ! grep -q '^block-time=10' $(REGTEST_CONF); then \
+		echo 'block-time=10' >> $(REGTEST_CONF); \
 	fi;
 	@echo "Starting WildBitLab in the background...";
 	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml up -d > ../regtest.log 2>&1 &);
