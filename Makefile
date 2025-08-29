@@ -66,10 +66,10 @@ _check_npm: ## Check NPM version and location
 
 _check_brew: ## Check Homebrew installation
 	@echo "Checking Homebrew..."
-	@command -v brew >/dev/null || (echo >&2 "Homebrew not found"; exit 1)
+	@command -v brew >/dev/null || (echo >&2 "Homebrew not found")
 	@echo "Homebrew OK"
 
-_check: _check_python _check_cargo _check_node _check_npm _check_brew ## Check all dependencies
+_check: _check_python _check_cargo _check_node _check_npm ## Check all dependencies
 	@echo "Dependencies up to date"
 
 _venv: ## Create a Python virtual environment if not present
@@ -100,7 +100,7 @@ _zk_engine_setup: _deps ## Run zk_engine setup
 		(cd zk_engine && cargo run --release -- setup); \
 	fi
 
-sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridge demo
+sui_demo: start_regtest start_sui ## SUI to BSV bridge demo
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo setup --network regtest)
 	@echo "Setup completed"
@@ -121,7 +121,7 @@ sui_demo: _check _venv _submodules _start_regtest _start_sui ## SUI to BSV bridg
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegout --user bob --token-index 0 --network regtest --update)
 	@echo "SUI-BSV bridge demo completed"
 
-eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridge demo
+eth_demo: start_regtest start_eth ## ETH to BSV bridge demo
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo setup)
 	@echo "Setup completed"
@@ -142,7 +142,7 @@ eth_demo: _check _venv _submodules _start_regtest _start_eth ## ETH to BSV bridg
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo pegout)
 	@echo "ETH-BSV bridge demo completed"
 
-_start_sui: ## Start local SUI environment
+start_sui: ## Start local SUI environment
 	@echo "Setting up SUI environment..."
 	@PATH="$(HOME)/.cargo/bin:$$PATH" \
 	RUST_LOG="off,sui_node=info" \
@@ -157,8 +157,7 @@ _start_sui: ## Start local SUI environment
 	@PATH="$(HOME)/.cargo/bin:$$PATH" sui-explorer-local start > explorer.log 2>&1 &
 	@echo "SUI environment ready"
 
-
-_start_eth: ## Start local ETH environment
+start_eth: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
 	@cd evm && npm install --save-dev hardhat@2.26.3 typescript ts-node @nomicfoundation/hardhat-ethers@3.0.8 ethers @nomicfoundation/hardhat-toolbox-viem@4.1.0 >/dev/null
@@ -166,7 +165,7 @@ _start_eth: ## Start local ETH environment
 	@echo $$! > hardhat-node.pid
 	@echo "ETH environment ready"
 
-_start_regtest: ## Start the regtest environment
+start_regtest: ## Start the regtest environment
 	@echo "Setting up Bitcoin SV regtest..."
 	@if [ ! -d "$(REGTEST_DIR)" ]; then \
 		echo "Cloning WildBitLab..."; \
