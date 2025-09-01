@@ -6,12 +6,7 @@ PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 REGTEST_DIR = ./wild-bit-lab
 REGTEST_CONF = $(REGTEST_DIR)/data/bitcoin.conf
-PAUSE = @printf "Press Enter to continue, anything else to stop... "; \
-	read -n 1 key; echo ""; \
-	if [ "$$key" != "" ]; then \
-		echo "Aborted."; \
-		exit 1; \
-	fi
+PAUSE = @printf "Press Enter to continue..."; read _
 
 # Helper function to check version
 define check_version
