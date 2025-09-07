@@ -2,3 +2,8 @@
 	path = zkscript_package
 	url = https://github.com/nchain-innovation/zkscript_package.git
 	branch = perf/reduce-groth16proj-86
+
+[submodule "wild-bit-lab"]
+	path = wild-bit-lab
+	url = https://github.com/nchain-innovation/wild-bit-lab
+	branch = config/large-scripts

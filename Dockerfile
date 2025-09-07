@@ -1,77 +1,58 @@
-# syntax=docker/dockerfile:1
+# Docker-in-Docker base
+FROM docker:28.3-dind
 
-# --- Base stage ---
-FROM ubuntu:24.04 AS base
+# Variables
+ENV RUST_VERSION=1.87.0
+ENV DOCKER_COMPOSE_VERSION=2.21.1
+ENV REGTEST_DIR=/app/wild-bit-lab
+ENV REGTEST_CONF=$REGTEST_DIR/data/bitcoin.conf
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Install system dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    tini \
+    build-base \
+    openssl \
+    pkgconfig \
+    python3 \
+    py3-pip \
+    py3-virtualenv \
+    nodejs \
+    npm \
+    libc6-compat # required for some binaries
 
-# System deps (INTENTIONALLY no nodejs/npm here)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3.12-venv \
-    curl git ca-certificates build-essential pkg-config libssl-dev \
-    cargo \
-    netcat-openbsd \
-    file procps \
-    && rm -rf /var/lib/apt/lists/*
+# Install Rust
+ENV PATH="/root/.cargo/bin:$PATH"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION} \
+    && rustc --version
 
-# Rust via rustup
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/root/.cargo/bin:$PATH"
 
-# --- Stage 2: grab sui binary from Mysten ---
-FROM mysten/sui-tools:devnet AS sui-tools
-
-# --- Final stage ---
-FROM base
-
-# Bring in sui
-COPY --from=sui-tools /usr/local/bin/sui /usr/local/bin/sui
-
-# Workdir + repo
+# Set working directory
 WORKDIR /app
+
+# Copy project
 COPY . .
 
-# Python venv + deps
-RUN python3 -m venv /opt/venv \
-    && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r zkscript_package/requirements.txt \
-    && /opt/venv/bin/pip install -r cli/requirements.txt
+# Update git submodules
+RUN git submodule update --init --recursive
 
-# Make venv, cargo and /usr/local/bin first on PATH
-ENV PATH="/opt/venv/bin:/usr/local/bin:/root/.cargo/bin:${PATH}"
+# Setup zk-engine
+RUN cd zk_engine && cargo run --release -- setup
 
-# Build zk_engine (runtime setup/keys happen later via Makefile)
-RUN cargo build --release --manifest-path zk_engine/Cargo.toml
+# Clone wild-bit-lab and modify config
+RUN if ! grep -q '^maxscriptsizepolicy=100000000' "$REGTEST_CONF"; then \
+        echo 'maxscriptsizepolicy=100000000' >> "$REGTEST_CONF"; \
+    fi
 
-# ---------- Install Node.js 22 from official tarball (arch-aware) ----------
-ARG NODE_VERSION=22.10.0
-RUN set -eux; \
-    arch="$(dpkg --print-architecture)"; \
-    case "$arch" in \
-      amd64) node_arch="x64" ;; \
-      arm64) node_arch="arm64" ;; \
-      ppc64el) node_arch="ppc64le" ;; \
-      s390x) node_arch="s390x" ;; \
-      *) echo "Unsupported architecture: $arch"; exit 1 ;; \
-    esac; \
-    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
-      | tar -xJ -C /usr/local --strip-components=1; \
-    ln -sf /usr/local/bin/node /usr/bin/node; \
-    ln -sf /usr/local/bin/npm  /usr/bin/npm; \
-    ln -sf /usr/local/bin/npx  /usr/bin/npx; \
-    node -v; npm -v
+# Mark /app as safe Git directory
+RUN git config --global --add safe.directory /app
 
-# ETH dev deps exactly like Makefile (ensure package.json exists)
-RUN cd evm \
-    && npm init -y \
-    && npm install --save-dev \
-       hardhat@2.26.3 \
-       typescript \
-       ts-node \
-       @nomicfoundation/hardhat-ethers@3.0.8 \
-       ethers \
-       @nomicfoundation/hardhat-toolbox-viem@4.1.0
-
-# Default entry: run Make targets
-ENTRYPOINT ["make"]
-CMD ["help"]
+# Tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["bash", "-l"]

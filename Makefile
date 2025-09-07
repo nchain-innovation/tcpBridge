@@ -6,7 +6,7 @@ PYTHON = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
 REGTEST_DIR = ./wild-bit-lab
 REGTEST_CONF = $(REGTEST_DIR)/data/bitcoin.conf
-PAUSE = @printf "Press Enter to continue..."; read _
+PAUSE = @if [ -t 0 ]; then printf "Press Enter to continue..."; read _; fi
 
 # Helper function to check version
 define check_version
@@ -68,13 +68,13 @@ _check: _check_python _check_cargo _check_node _check_npm ## Check all dependenc
 	@echo "Dependencies up to date"
 
 _venv: ## Create a Python virtual environment if not present
-	@echo "Checking for virtual environment..."
-	@if [ ! -d "$(VENV)" ]; then \
-		echo "Creating virtual environment..."; \
-		python3 -m venv $(VENV); \
-	else \
-		echo "Virtual environment already exists"; \
-	fi
+	@echo "Creating virtual environment..."
+	@rm -rf $(VENV)
+	@python3 -m venv $(VENV);
+	@echo "Upgrading pip and setuptools..."
+	@$(VENV)/bin/python -m ensurepip --upgrade
+	@$(VENV)/bin/pip install --upgrade pip setuptools wheel
+
 
 _submodules: ## Initialize and update git submodules
 	@echo "Updating git submodules..."
@@ -94,8 +94,9 @@ _zk_engine_setup: _deps ## Run zk_engine setup
 		echo "Setting up zk_engine..."; \
 		(cd zk_engine && cargo run --release -- setup); \
 	fi
-
-sui_demo: start_regtest start_sui ## SUI to BSV bridge demo
+sui_demo: start_regtest start_sui _sui_demo_no_setup ## SUI to BSV bridge demo
+eth_demo: start_regtest start_eth _eth_demo_no_setup ## ETH to BSV bridge demo
+_sui_demo_no_setup: ## SUI to BSV bridge demo without setting up the environment
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo setup --network regtest)
 	@echo "Setup completed"
@@ -116,7 +117,7 @@ sui_demo: start_regtest start_sui ## SUI to BSV bridge demo
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegout --user bob --token-index 0 --network regtest --update)
 	@echo "SUI-BSV bridge demo completed"
 
-eth_demo: start_regtest start_eth ## ETH to BSV bridge demo
+_eth_demo_no_setup: ## ETH to BSV bridge demo without setting up the environment
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo setup)
 	@echo "Setup completed"
@@ -171,7 +172,7 @@ start_regtest: ## Start the regtest environment
 		echo 'maxscriptsizepolicy=100000000' >> $(REGTEST_CONF); \
 	fi;
 	@echo "Starting WildBitLab in the background...";
-	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml up -d > ../regtest.log 2>&1 &);
+	@(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file one-node.yml up -d > ../regtest.log 2>&1 &);
 	@while ! nc -z 127.0.0.1 18332 2>/dev/null; do \
 		echo "Waiting for Bitcoin node to be ready..."; \
 		sleep 2; \
@@ -199,7 +200,7 @@ _light_clean: ## Equivalent to the clean command
 
 	@if [ -d "wild-bit-lab" ]; then \
 		echo "Stopping WildBitLab containers..."; \
-		(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file three-node.yml down --remove-orphans > ../regtest.log 2>&1 &); \
+		(cd $(REGTEST_DIR) && docker compose -p wildbitlab --file one-node.yml down --remove-orphans > ../regtest.log 2>&1 &); \
 		echo "Removing WildBitLab folder..."; \
 		rm -rf wild-bit-lab; \
 	fi
