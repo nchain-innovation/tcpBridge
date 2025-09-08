@@ -1,28 +1,20 @@
 FROM mysten/sui-tools:devnet
 
-# Install dependencies
+# Install only what’s necessary
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        make build-essential git tini curl bash gnupg expect && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends nodejs && \
+        bash \
+        curl \
+        tini \
+        expect \
+        nodejs \
+        npm && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH=/root/.cargo/bin:$PATH
-
-# Install Sui CLI
-RUN bash -c "source $HOME/.cargo/env && curl -sSf https://get.sui.io | bash"
-
-# Working directory
-WORKDIR /app
-COPY . .
-
 # Install Sui explorer globally
-RUN npm install -g sui-explorer-local@latest
+RUN npm install -g sui-explorer-local@latest && \
+    npm cache clean --force
 
-#Entrypoint
+# Entrypoint
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["bash"]

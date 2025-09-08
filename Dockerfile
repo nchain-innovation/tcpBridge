@@ -39,20 +39,15 @@ WORKDIR /app
 # Copy project
 COPY . .
 
+# Mark /app as safe Git directory
+RUN git config --global --add safe.directory /app
+
 # Update git submodules
 RUN git submodule update --init --recursive
 
 # Setup zk-engine
 RUN cd zk_engine && cargo run --release -- setup
 
-# Clone wild-bit-lab and modify config
-RUN if ! grep -q '^maxscriptsizepolicy=100000000' "$REGTEST_CONF"; then \
-        echo 'maxscriptsizepolicy=100000000' >> "$REGTEST_CONF"; \
-    fi
-
-# Mark /app as safe Git directory
-RUN git config --global --add safe.directory /app
-
-# Tini for proper signal handling
+# Tini for signal handling
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["bash", "-l"]

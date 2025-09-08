@@ -1,0 +1,33 @@
+# Docker-in-Docker base
+FROM alpine:latest
+
+# Install system dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    tini \
+    nodejs \
+    npm
+
+# Set working directory
+WORKDIR /app/evm
+
+# Copy only evm folder
+COPY evm/ .
+
+# Setup EVM environment
+RUN npm init -y >/dev/null && \
+    npm install --save-dev \
+      hardhat@2.26.3 \
+      typescript \
+      ts-node \
+      @nomicfoundation/hardhat-ethers@3.0.8 \
+      ethers \
+      @nomicfoundation/hardhat-toolbox-viem@4.1.0 \
+    >/dev/null && \
+    npm cache clean --force
+
+
+# Tini for signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["bash", "-l"]

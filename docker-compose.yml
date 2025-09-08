@@ -1,42 +1,38 @@
-x-bridge-image: &bridge_image
-  build:
-    context: .
-    dockerfile: Dockerfile
-  image: bridge-demo:latest
-
 services:
   #########################################################################
-  # Regtest mining                                                          #
+  # Regtest mining                                                        #
   #########################################################################
-  # mine-blocks:
-  #   <<: *bridge_image
-  #   container_name: mine-blocks
-  #   working_dir: /app
-  #   stdin_open: true
-  #   tty: true
-  #   depends_on:
-  #     node1:
-  #       condition: service_healthy
-  #   command: >
-  #     bash -c "
-  #     ADDRESS=$(curl -s --user bitcoin:bitcoin \
-  #       --data-binary '{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"getnewaddress\"}' \
-  #       -H 'content-type: text/plain;' http://node1:18332 | cut -d'\"' -f4);
-  #     echo Mining 100 blocks to $ADDRESS;
-  #     curl -s --user bitcoin:bitcoin \
-  #       --data-binary '{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100, \"'$ADDRESS'\"]}' \
-  #       -H 'content-type: text/plain;' http://node1:18332;
-  #     echo Done;
-  #     exec bash"
+  miner:
+    image: initialised-demo
+    container_name: miner
+    depends_on:
+      - node1
+      - orchestrator
+      - node-explorer
+      - dashboard
+    command:
+      - bash
+      - -c
+      - |
+        until curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getwalletinfo"}' -H 'content-type: text/plain;' http://node1:18332 | grep -q '"error":null'; do
+          sleep 1
+        done
+        RESP=$(curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getnewaddress"}' -H 'content-type: text/plain;' http://node1:18332)
+        ADDRESS=$(echo "$$RESP" | sed -n 's/.*"result":[[:space:]]*"\([^"]*\)".*/\1/p')
+        echo "Bitcoin address: $$ADDRESS"
+        RESPONSE=$(curl -s --user bitcoin:bitcoin --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" -H 'content-type: text/plain;' http://node1:18332)
+        echo "Mining complete"
+    networks:
+      - regtest_network
 
   #########################################################################
-  # SUI node                                                                #
+  # SUI node                                                              #
   #########################################################################
   sui-node:
     image: custom-sui
     container_name: sui-node
     command: >
-      bash -lc "
+      bash -c "
         RUST_LOG=off,sui_node=info sui start --with-faucet --force-regenesis > sui.log 2>&1 &
         sleep 2;
         expect -c \"spawn sui client new-env --alias local --rpc http://0.0.0.0:9000; \
@@ -56,101 +52,25 @@ services:
     ports:
       - "9000:9000"
       - "9184:9184"
-      - "8080:8080"
+      - "8081:8080"
 
   #########################################################################
-  # Hardhat ETH node                                                        #
-  # #########################################################################
-  # hardhat-node:
-  #   <<: *bridge_image
-  #   container_name: hardhat-node
-  #   working_dir: /app/evm
-  #   command: ["bash","-lc","npx hardhat node --hostname 0.0.0.0"]
-  #   ports:
-  #     - "8545:8545"
-  #   volumes:
-  #     - hardhat-cache:/app/evm/cache
-  #     - hardhat-artifacts:/app/evm/artifacts
+  # ETH node                                                              #
+  #########################################################################
+  eth-node:
+    image: custom-eth
+    container_name: eth-node
+    working_dir: /app/evm
+    command: >
+      bash -c "
+        npx hardhat node
+        sleep infinity
+      "
+    ports:
+      - "8545:8545"
 
-#   #########################################################################
-#   # ETH demo orchestrator (one command)                                    #
-#   #########################################################################
-#   eth_demo_runner:
-#     <<: *bridge_image
-#     container_name: eth_demo_runner
-#     depends_on:
-#       - regtest-config
-#       - hardhat-node
-#       - bridge-cli
-#     network_mode: host
-#     entrypoint: ["/bin/bash","-lc"]
-#     command: >
-#       '
-#         set -euo pipefail;
-#         echo "[1] Waiting for Hardhat RPC...";
-#         for i in $(seq 1 120); do nc -z 127.0.0.1 8545 && break || sleep 1; done;
-
-#         echo "[2] Mining 100 BSV blocks...";
-#         ADDRESS=$(curl -s --user bitcoin:bitcoin -H "content-type: text/plain;" \
-#           --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"getnewaddress\"}" \
-#           http://regtest-node:18332 | cut -d\" -f4);
-#         curl -s --user bitcoin:bitcoin -H "content-type: text/plain;" \
-#           --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" \
-#           http://regtest-node:18332 >/dev/null;
-
-#         echo "[3] Running ETH demo...";
-#         cd /app/cli;
-#         export PYTHONPATH=$PWD:$PWD/..;
-#         python -m evm_demo pegin --user alice --pegin-amount 10 --network regtest;
-#         python -m evm_demo transfer --sender alice --receiver bob --token-index 0 --network regtest;
-#         python -m evm_demo burn --user bob --token-index 0 --network regtest;
-#         python -m evm_demo pegout;
-#         echo "[ok] ETH demo finished";
-#       '
-
-#   #########################################################################
-#   # SUI demo orchestrator (one command)                                    #
-#   #########################################################################
-#   sui_demo_runner:
-#     <<: *bridge_image
-#     container_name: sui_demo_runner
-#     depends_on:
-#       - regtest-config
-#       - sui-node
-#       - bridge-cli
-#     network_mode: host
-#     entrypoint: ["/bin/bash","-lc"]
-#     command: >
-#       '
-#         set -euo pipefail;
-#         echo "[1] Waiting for SUI RPC...";
-#         for i in $(seq 1 120); do nc -z 127.0.0.1 9000 && break || sleep 1; done;
-
-#         echo "[2] Mining 100 BSV blocks...";
-#         ADDRESS=$(curl -s --user bitcoin:bitcoin -H "content-type: text/plain;" \
-#           --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"getnewaddress\"}" \
-#           http://regtest-node:18332 | cut -d\" -f4);
-#         curl -s --user bitcoin:bitcoin -H "content-type: text/plain;" \
-#           --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" \
-#           http://regtest-node:18332 >/dev/null;
-
-#         echo "[3] Running SUI demo...";
-#         cd /app/cli;
-#         export PYTHONPATH=$PWD:$PWD/..;
-#         python -m sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest;
-#         python -m sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest;
-#         python -m sui_demo burn --user bob --token-index 0 --network regtest;
-#         python -m sui_demo pegout --user bob --token-index 0 --network regtest --update;
-#         echo "[ok] SUI demo finished";
-#       '
 
 # volumes:
 #   sui-data:
 #   hardhat-cache:
 #   hardhat-artifacts:
-
-
-# # make setup
-# # cd wild-bit-lab
-# # sed -i '/\.\/data\/bitcoin.conf:\/app\/data\/bitcoin.conf/d' three-node.yml
-# # cd ..
