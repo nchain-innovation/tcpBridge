@@ -3,7 +3,7 @@ services:
   # Regtest mining                                                        #
   #########################################################################
   miner:
-    image: initialised-demo
+    image: init-demo
     container_name: miner
     depends_on:
       - node1
@@ -22,37 +22,9 @@ services:
         echo "Bitcoin address: $$ADDRESS"
         RESPONSE=$(curl -s --user bitcoin:bitcoin --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" -H 'content-type: text/plain;' http://node1:18332)
         echo "Mining complete"
+        sleep infinity
     networks:
       - regtest_network
-
-  #########################################################################
-  # SUI node                                                              #
-  #########################################################################
-  sui-node:
-    image: custom-sui
-    container_name: sui-node
-    command: >
-      bash -c "
-        RUST_LOG=off,sui_node=info sui start --with-faucet --force-regenesis > sui.log 2>&1 &
-        sleep 2;
-        expect -c \"spawn sui client new-env --alias local --rpc http://0.0.0.0:9000; \
-          sleep 1; \
-          send \\\"y\\\\r\\\"; \
-          sleep 0.2; \
-          send \\\"\\\\r\\\"; \
-          sleep 0.2; \
-          send \\\"0\\\\r\\\"; \
-          expect eof\"; \
-        sui client switch --env local; \
-        sui client active-address; \
-        sui client faucet; \
-        sui-explorer-local start > explorer.log 2>&1 & \
-        sleep infinity
-      "
-    ports:
-      - "9000:9000"
-      - "9184:9184"
-      - "8081:8080"
 
   #########################################################################
   # ETH node                                                              #
@@ -68,9 +40,33 @@ services:
       "
     ports:
       - "8545:8545"
+    networks:
+      - regtest_network
+
+  #########################################################################
+  # ETH demo                                                              #
+  #########################################################################
+  eth-demo:
+    image: init-demo
+    container_name: eth-demo
+    depends_on:
+      - eth-node
+      - miner
+    working_dir: /app
+    command: >
+      bash -c "
+        sed -i 's/127.0.0.1/eth-node/g' ./evm/hardhat.config.ts;
+        sed -i 's/localhost/node1/g' ./cli/bsv_config.toml;
+        sed -i 's/localhost/node1/g' ./cli/bsv/utils.py;
+        cd cli;
+        python3 -m evm_demo setup;
+        python3 -m evm_demo pegin --user alice --pegin-amount 1000000 --network regtest;
+        python3 -m evm_demo transfer --sender alice --receiver bob --token-index 0 --network regtest;
+        python3 -m evm_demo burn --user bob --token-index 0 --network regtest;
+        python3 -m evm_demo pegout;
+        sleep infinity
+      "
+    networks:
+      - regtest_network
 
 
-# volumes:
-#   sui-data:
-#   hardhat-cache:
-#   hardhat-artifacts:

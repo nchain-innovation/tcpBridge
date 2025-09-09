@@ -1,53 +1,58 @@
-# Docker-in-Docker base
-FROM docker:28.3-dind
+# Base: Python 3.12 slim
+FROM python:3.12-slim
 
-# Variables
-ENV RUST_VERSION=1.87.0
-ENV DOCKER_COMPOSE_VERSION=2.21.1
-ENV REGTEST_DIR=/app/wild-bit-lab
-ENV REGTEST_CONF=$REGTEST_DIR/data/bitcoin.conf
-
-# Install system dependencies
-RUN apk add --no-cache \
-    bash \
-    curl \
-    git \
-    tini \
-    build-base \
-    openssl \
-    pkgconfig \
-    python3 \
-    py3-pip \
-    py3-virtualenv \
-    nodejs \
-    npm \
-    libc6-compat # required for some binaries
-
-# Install Rust
-ENV PATH="/root/.cargo/bin:$PATH"
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUST_VERSION} \
-    && rustc --version
-
-# Environment variables
+# Environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/root/.cargo/bin:$PATH"
 
+# Install system dependencies, Rust (rustup/cargo), and keep image minimal
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      bash \
+      curl \
+      git \
+      tini \
+      ca-certificates \
+      build-essential \
+      pkg-config \
+      libssl-dev \
+      gnupg \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal 
+
+# Install Node.js 22.x
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
-# Copy project
+# Copy the project
 COPY . .
 
-# Mark /app as safe Git directory
-RUN git config --global --add safe.directory /app
-
-# Update git submodules
-RUN git submodule update --init --recursive
-
-# Setup zk-engine
+# Run zk_engine setup (requires cargo at runtime)
 RUN cd zk_engine && cargo run --release -- setup
 
-# Tini for signal handling
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["bash", "-l"]
+# Initialize git submodules 
+RUN git submodule update --init --recursive
+
+# Install Python dependencies system-wide (ignoring PEP 668)
+RUN pip install --upgrade pip --break-system-packages \
+    && pip install --break-system-packages -r zkscript_package/requirements.txt \
+    && pip install --break-system-packages -r cli/requirements.txt
+
+# Install Hardhat + EVM environment globally
+RUN npm install -g \
+      hardhat@2.26.3 \
+      typescript \
+      ts-node \
+      @nomicfoundation/hardhat-ethers@3.0.8 \
+      ethers \
+      @nomicfoundation/hardhat-toolbox-viem@4.1.0 \
+    && npm cache clean --force
+
+# Tini for proper signal handling
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["bash"]
