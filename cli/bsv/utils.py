@@ -3,13 +3,25 @@
 from random import randint
 
 import ecdsa
-from tx_engine import SIGHASH, Script, Tx, TxIn, TxOut, Wallet, sig_hash
+import toml
+from tx_engine import SIGHASH, Script, Tx, TxIn, TxOut, Wallet, sig_hash, interface_factory
 from tx_engine.interface.blockchain_interface import BlockchainInterface
 from tx_engine.interface.interface_factory import InterfaceFactory
 
 GROUP_ORDER = ecdsa.curves.SECP256k1.order
 
 SIG_LEN = 0x48
+
+def load_config(filename="bsv.toml"):
+    """Load config from provided toml file"""
+    try:
+        with open(filename, "r") as f:
+            config = toml.load(f)
+        return config
+    except FileNotFoundError as e:
+        print(e)
+        return {}
+
 
 
 def setup_network_connection(network):
@@ -125,7 +137,7 @@ def spend_utxo(
         index_output,
         fee_rate,
     )
-
+    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -168,6 +180,7 @@ def spend_p2pk(
             flag=flag,
         )
 
+    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -217,6 +230,7 @@ def spend_p2pkh(
             flag=flag,
         )
 
+    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -246,6 +260,7 @@ def p2pkh(public_key: Wallet, amount: int, data_payload: None | bytes = None) ->
 
 def tx_from_id(txid: str, network: BlockchainInterface) -> Tx:
     """Retrieve `txid` from the Blockchain and convert it to an instance of `Tx`."""
+    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
     return Tx.parse_hexstr(network.get_raw_transaction(txid))
 
 

@@ -4,6 +4,7 @@ FROM python:3.12-slim
 # Environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
     PATH="/root/.cargo/bin:$PATH"
 
 # Install system dependencies, Rust (rustup/cargo), and keep image minimal
