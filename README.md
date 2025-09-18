@@ -174,10 +174,8 @@ For the evm demo run
 
 ```
     make setup
-    make eth_demo
+    make evm_demo
 ```
-
-
 
 ## License
 
