@@ -157,15 +157,7 @@ The demo can be run with the following commands:
     docker compose -f wild-bit-lab/one-node.yml -f demo-evm.yml up
 ```
 
-To silence the BSV explorer logs, run:
-
-```
-    docker compose -f wild-bit-lab/one-node.yml -f demo-sui.yml up --no-attach explorer
-    docker compose -f wild-bit-lab/one-node.yml -f demo-evm.yml up --no-attach explorer
-```
-
-
-The containers will start the BSV node, the SUI/EVM node, and the explorer interfaces.
+This will start the BSV node, the SUI/EVM node, and the explorer interfaces.
 
 ## License
 

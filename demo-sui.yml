@@ -45,10 +45,14 @@ services:
         RUST_LOG=off sui start --with-faucet --force-regenesis >/dev/null 2>&1 &
         sui-explorer-local start >/dev/null 2>&1 &
         expect -c '
-          spawn sui client new-env --alias local --rpc http://localhost:9000
-          set timeout -1
-          send "y\r\r0\r"
-          expect eof
+          spawn sui client new-env --alias local --rpc http://localhost:9000 
+          expect "do you want to connect" 
+          send "y\r" 
+          expect "Environment alias" 
+          send "\r" 
+          expect "Select key scheme" 
+          send "0\r" 
+          expect eof 
         '
         sui client switch --env local
         sui client active-address
