@@ -79,7 +79,6 @@ _venv: ## Create a Python virtual environment if not present
 _submodules: ## Initialize and update git submodules
 	@echo "Updating git submodules..."
 	@git submodule update --init --recursive
-	@git submodule update --remote
 
 _deps: _venv ## Install Python dependencies
 	@echo "Installing dependencies..."

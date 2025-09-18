@@ -44,15 +44,17 @@ RUN pip install --upgrade pip --break-system-packages \
     && pip install --break-system-packages -r zkscript_package/requirements.txt \
     && pip install --break-system-packages -r cli/requirements.txt
 
-# Install Hardhat + EVM environment globally
-RUN npm install -g \
+# Setup EVM environment
+RUN cd evm && npm init -y >/dev/null && \
+    npm install --save-dev \
       hardhat@2.26.3 \
       typescript \
       ts-node \
       @nomicfoundation/hardhat-ethers@3.0.8 \
       ethers \
       @nomicfoundation/hardhat-toolbox-viem@4.1.0 \
-    && npm cache clean --force
+    >/dev/null && \
+    npm cache clean --force
 
 # Tini for proper signal handling
 ENTRYPOINT ["/usr/bin/tini", "--"]

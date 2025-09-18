@@ -1,19 +1,72 @@
+# Base image with Sui tools
 FROM mysten/sui-tools:devnet
 
-# Install only what’s necessary
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Environment
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PATH="/root/.cargo/bin:/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
         bash \
         curl \
+        git \
         tini \
         expect \
+        ca-certificates \
+        build-essential \
+        pkg-config \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        llvm \
+        libssl-dev \
+        gnupg \
         nodejs \
-        npm && \
-    rm -rf /var/lib/apt/lists/*
+        npm \
+    && rm -rf /var/lib/apt/lists/* 
 
-# Install Sui explorer globally
-RUN npm install -g sui-explorer-local@latest && \
-    npm cache clean --force
+# Install python 
+RUN curl https://pyenv.run | bash \ 
+    && pyenv update \ 
+    && pyenv install 3.12 \ 
+    && pyenv global 3.12 \ 
+    && pyenv rehash
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+
+# Install Node.js 22.x
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+     && apt-get install -y --no-install-recommends nodejs \
+     && rm -rf /var/lib/apt/lists/*
+
+# Install Sui explorer
+RUN npm install -g sui-explorer-local@latest && npm cache clean --force
+
+# Set working directory
+WORKDIR /app
+
+# Copy the project
+COPY . .
+
+# Initialize git submodules 
+RUN git submodule update --init --recursive
+
+# Install Python dependencies (ignoring PEP 668)
+RUN pip install --upgrade --break-system-packages pip \
+    && pip install --break-system-packages -r zkscript_package/requirements.txt \
+    && pip install --break-system-packages -r cli/requirements.txt
+
+# Run zk_engine setup
+RUN cd zk_engine && cargo run --release -- setup
+
+# Build Sui contracts
+RUN cd cli/sui && cargo build --release
 
 # Entrypoint
 ENTRYPOINT ["/usr/bin/tini", "--"]
