@@ -144,8 +144,8 @@ This setup provides a fully isolated environment for bridge demos. This reposito
 During the build process, the Dockerfiles generate the cryptographic keys used in the demo. As this process can be slow, it is possible to rely on public pre-built images. To build the images, run the following commands:
 
 ```
-    docker build -t teranode/bridge-demo-sui -f Dockerfile.sui .
-    docker build -t teranode/bridge-demo-evm -f Dockerfile.evm .
+    docker build -t ghcr.io/nchain-innovation/bridge-demo-sui -f Dockerfile.sui .
+    docker build -t ghcr.io/nchain-innovation/bridge-demo-evm -f Dockerfile.evm .
 ```
 
 ### Run the demo

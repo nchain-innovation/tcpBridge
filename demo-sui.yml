@@ -3,7 +3,7 @@ services:
   # Regtest mining                                                        #
   #########################################################################
   miner:
-    image: teranode-bridge-demo-sui
+    image: ghcr.io/nchain-innovation/bridge-demo-sui
     container_name: miner
     depends_on:
       - node1
@@ -26,48 +26,11 @@ services:
     networks:
       - regtest_network
 
-  # #########################################################################
-  # # SUI node                                                              #
-  # #########################################################################
-  # sui-node:
-  #   image: teranode-bridge-demo-sui
-  #   container_name: sui-node
-  #   command:   
-  #     - bash
-  #     - -c
-  #     - |
-  #       RUST_LOG=off sui start --with-faucet --force-regenesis
-  #   networks:
-  #     - regtest_network
-  #   ports:
-  #     - "9000:9000"   # RPC
-  #     - "9184:9184"   # Metrics
-  #     - "9123:9123"   # Faucet
-
-
-  # #########################################################################
-  # # SUI explorer                                                          #
-  # #########################################################################
-  # sui-explorer:
-  #   image: teranode-bridge-demo-sui
-  #   container_name: sui-explorer
-  #   depends_on:
-  #     - sui-node
-  #   command: >
-  #     bash -c "
-  #       sui-explorer-local start
-  #       sleep infinity
-  #     "
-  #   networks:
-  #     - regtest_network
-  #   ports:
-  #     - "9001:9001"  
-
   #########################################################################
   # SUI demo                                                              #
   #########################################################################
   sui-demo:
-    image: teranode-bridge-demo-sui
+    image: ghcr.io/nchain-innovation/bridge-demo-sui
     container_name: sui-demo
     depends_on:
       - miner

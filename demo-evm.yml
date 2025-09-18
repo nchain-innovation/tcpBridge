@@ -3,7 +3,7 @@ services:
   # Regtest mining                                                        #
   #########################################################################
   miner:
-    image: teranode-bridge-demo-evm
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
     container_name: miner
     depends_on:
       - node1
@@ -30,7 +30,7 @@ services:
   # ETH node                                                              #
   #########################################################################
   evm-node:
-    image: teranode-bridge-demo-evm
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
     container_name: evm-node
     working_dir: /app/evm
     command: >
@@ -47,7 +47,7 @@ services:
   # ETH demo                                                              #
   #########################################################################
   evm-demo:
-    image: teranode-bridge-demo-evm
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
     container_name: evm-demo
     depends_on:
       - evm-node
