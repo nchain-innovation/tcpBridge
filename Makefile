@@ -94,7 +94,7 @@ _zk_engine_setup: _deps ## Run zk_engine setup
 		(cd zk_engine && cargo run --release -- setup); \
 	fi
 sui_demo: start_regtest start_sui _sui_demo_no_setup ## SUI to BSV bridge demo
-eth_demo: start_regtest start_eth _eth_demo_no_setup ## ETH to BSV bridge demo
+evm_demo: start_regtest start_evm _evm_demo_no_setup ## ETH to BSV bridge demo
 _sui_demo_no_setup: ## SUI to BSV bridge demo without setting up the environment
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo setup --network regtest)
@@ -116,7 +116,7 @@ _sui_demo_no_setup: ## SUI to BSV bridge demo without setting up the environment
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m sui_demo pegout --user bob --token-index 0 --network regtest --update)
 	@echo "SUI-BSV bridge demo completed"
 
-_eth_demo_no_setup: ## ETH to BSV bridge demo without setting up the environment
+_evm_demo_no_setup: ## ETH to BSV bridge demo without setting up the environment
 	@echo "Setting up the environment..."
 	@(cd cli && PYTHONPATH=$$PWD:$$PWD/.. ../$(PYTHON) -m evm_demo setup)
 	@echo "Setup completed"
@@ -152,7 +152,7 @@ start_sui: ## Start local SUI environment
 	@PATH="$(HOME)/.cargo/bin:$$PATH" sui-explorer-local start > explorer.log 2>&1 &
 	@echo "SUI environment ready"
 
-start_eth: ## Start local ETH environment
+start_evm: ## Start local ETH environment
 	@echo "Setting up ETH environment..."
 	@cd evm && npm init -y >/dev/null
 	@cd evm && npm install --save-dev hardhat@2.26.3 typescript ts-node @nomicfoundation/hardhat-ethers@3.0.8 ethers @nomicfoundation/hardhat-toolbox-viem@4.1.0 >/dev/null

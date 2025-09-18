@@ -148,7 +148,7 @@ During the build process, the Dockerfiles generate the cryptographic keys used i
     docker build -t ghcr.io/nchain-innovation/bridge-demo-evm -f Dockerfile.evm .
 ```
 
-### Run the demo
+### Run the docker demo
 
 The demo can be run with the following commands:
 
@@ -158,6 +158,26 @@ The demo can be run with the following commands:
 ```
 
 This will start the BSV node, the SUI/EVM node, and the explorer interfaces.
+
+## Makefile
+
+Demo setup can be set up using the make file. 
+
+For the sui demo run:
+
+```
+    make setup
+    make sui_demo
+```
+
+For the evm demo run
+
+```
+    make setup
+    make eth_demo
+```
+
+
 
 ## License
 
