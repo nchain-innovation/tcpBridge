@@ -141,12 +141,14 @@ To check out Ethereum bridge on local networks, click here [README](./evm/README
 
 This setup provides a fully isolated environment for bridge demos. This repository contains two Dockerfiles: **Dockerfile.evm** for an EVM environment and **Dockerfile.sui** for a SUI environment. These can be used together with the **demo-evm.yml** and **demo-sui.yml** files to run the demos. The setup requires initializing the git submodules and relies on **wild-bit-lab** to set up a BSV regtest environment. Ensure Docker and Docker Compose are installed on your machine.
 
-During the build process, the Dockerfiles generate the cryptographic keys used in the demo. As this process can be slow, it is possible to rely on public pre-built images. To build the images, run the following commands:
+During the build process, the Dockerfiles generate the cryptographic keys used in the demo. To build the images, run the following commands:
 
 ```
     docker build -t ghcr.io/nchain-innovation/bridge-demo-sui -f Dockerfile.sui .
     docker build -t ghcr.io/nchain-innovation/bridge-demo-evm -f Dockerfile.evm .
 ```
+
+If it is not required to run the demo with fresh cryptographic keys for the ZK proof, it is possible to skip this step and rely on existing images.
 
 ### Run the docker demo
 
@@ -157,7 +159,7 @@ The demo can be run with the following commands:
     docker compose -f wild-bit-lab/one-node.yml -f demo-evm.yml up
 ```
 
-This will start the BSV node, the SUI/EVM node, and the explorer interfaces.
+This will start the BSV node, the SUI/EVM node, and the explorer interfaces. If there is access to the existing images, this step does not require building new images. The docker compose command will automatically try to pull from the repository.
 
 ## Makefile
 

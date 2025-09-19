@@ -9,7 +9,7 @@ from bsv.wallet import WalletManager
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 import argparse
 from bsv.block_header import MerkleProof
-from bsv.utils import load_config
+from bsv.utils import load_config, new_interface
 
 
 def generate_wallets(users, network):
@@ -186,7 +186,7 @@ def map_user_to_index(user_name: str, wallet_manager: WalletManager) -> int:
 
 
 def conditional_generate_block(network: WoCInterface | RPCInterface):
-    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
+    network = new_interface()
     if isinstance(network, RPCInterface):
         for i in range(5):
             try:
@@ -425,8 +425,7 @@ def main():
     args = parser.parse_args()
 
     # Load wallet
-    config = load_config("bsv_config.toml")
-    bsv_client = interface_factory.set_config(config["bsv_client"])
+    bsv_client = new_interface()
 
     # Dispatch commands
     if args.command == "setup":

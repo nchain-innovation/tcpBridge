@@ -22,7 +22,9 @@ def load_config(filename="bsv.toml"):
         print(e)
         return {}
 
-
+def new_interface(config_file="bsv_config.toml", client = "bsv_client"):
+    """Create a new interface using the config file."""
+    return interface_factory.set_config(load_config(config_file)[client])
 
 def setup_network_connection(network):
     """Setup network connection."""
@@ -137,7 +139,7 @@ def spend_utxo(
         index_output,
         fee_rate,
     )
-    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
+    network = new_interface()
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -180,7 +182,7 @@ def spend_p2pk(
             flag=flag,
         )
 
-    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
+    network = new_interface()
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -230,7 +232,7 @@ def spend_p2pkh(
             flag=flag,
         )
 
-    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
+    network = new_interface()
     return spending_tx, network.broadcast_tx(spending_tx.serialize().hex())
 
 
@@ -260,7 +262,7 @@ def p2pkh(public_key: Wallet, amount: int, data_payload: None | bytes = None) ->
 
 def tx_from_id(txid: str, network: BlockchainInterface) -> Tx:
     """Retrieve `txid` from the Blockchain and convert it to an instance of `Tx`."""
-    network = interface_factory.set_config(load_config("bsv_config.toml")["bsv_client"])
+    network = new_interface()
     return Tx.parse_hexstr(network.get_raw_transaction(txid))
 
 
