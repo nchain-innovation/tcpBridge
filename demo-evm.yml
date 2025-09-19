@@ -1,0 +1,72 @@
+services:
+  #########################################################################
+  # Regtest mining                                                        #
+  #########################################################################
+  miner:
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
+    container_name: miner
+    depends_on:
+      - node1
+      - orchestrator
+      - node-explorer
+      - dashboard
+    command:
+      - bash
+      - -c
+      - |
+        until curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getwalletinfo"}' -H 'content-type: text/plain;' http://node1:18332 | grep -q '"error":null'; do
+          sleep 1
+        done
+        RESP=$(curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getnewaddress"}' -H 'content-type: text/plain;' http://node1:18332)
+        ADDRESS=$(echo "$$RESP" | sed -n 's/.*"result":[[:space:]]*"\([^"]*\)".*/\1/p')
+        echo "Bitcoin address: $$ADDRESS"
+        RESPONSE=$(curl -s --user bitcoin:bitcoin --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" -H 'content-type: text/plain;' http://node1:18332)
+        echo "Mining complete"
+        sleep infinity
+    networks:
+      - regtest_network
+
+  #########################################################################
+  # ETH node                                                              #
+  #########################################################################
+  evm-node:
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
+    container_name: evm-node
+    working_dir: /app/evm
+    command: >
+      bash -c "
+        npx hardhat node
+        sleep infinity
+      "
+    ports:
+      - "8545:8545"
+    networks:
+      - regtest_network
+
+  #########################################################################
+  # ETH demo                                                              #
+  #########################################################################
+  evm-demo:
+    image: ghcr.io/nchain-innovation/bridge-demo-evm
+    container_name: evm-demo
+    depends_on:
+      - evm-node
+      - miner
+      - node1
+    working_dir: /app
+    command:
+      - bash
+      - -c
+      - |
+        sed -i 's/127.0.0.1/evm-node/g' ./evm/hardhat.config.ts
+        sed -i 's/localhost/node1/g' ./cli/bsv_config.toml
+        cd cli
+        python3 -m evm_demo setup
+        python3 -m evm_demo pegin --user alice --pegin-amount 10 --network regtest
+        python3 -m evm_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
+        python3 -m evm_demo burn --user bob --token-index 0 --network regtest
+        python3 -m evm_demo pegout
+        echo "Demo complete"
+        sleep infinity
+    networks:
+      - regtest_network

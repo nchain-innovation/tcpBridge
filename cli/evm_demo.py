@@ -9,17 +9,7 @@ from bsv.wallet import WalletManager
 from tx_engine.interface.interface_factory import WoCInterface, RPCInterface
 import argparse
 from bsv.block_header import MerkleProof
-
-
-def load_config(filename="bsv.toml") -> MutableMapping[str, Any]:
-    """Load config from provided toml file"""
-    try:
-        with open(filename, "r") as f:
-            config = toml.load(f)
-        return config
-    except FileNotFoundError as e:
-        print(e)
-        return {}
+from bsv.utils import load_config, new_interface
 
 
 def generate_wallets(users, network):
@@ -75,6 +65,9 @@ def setup_wallets(network):
             "localhost",
         ],
         cwd="../evm",
+        capture_output=True,
+        text=True,
+        check=True
     )
     wallets = generate_wallets(users, network)
 
@@ -193,6 +186,7 @@ def map_user_to_index(user_name: str, wallet_manager: WalletManager) -> int:
 
 
 def conditional_generate_block(network: WoCInterface | RPCInterface):
+    network = new_interface()
     if isinstance(network, RPCInterface):
         for i in range(5):
             try:
@@ -431,8 +425,7 @@ def main():
     args = parser.parse_args()
 
     # Load wallet
-    config = load_config("bsv_config.toml")
-    bsv_client = interface_factory.set_config(config["bsv_client"])
+    bsv_client = new_interface()
 
     # Dispatch commands
     if args.command == "setup":

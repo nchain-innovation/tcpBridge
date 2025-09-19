@@ -1,0 +1,78 @@
+services:
+  #########################################################################
+  # Regtest mining                                                        #
+  #########################################################################
+  miner:
+    image: ghcr.io/nchain-innovation/bridge-demo-sui
+    container_name: miner
+    depends_on:
+      - node1
+      - orchestrator
+      - node-explorer
+      - dashboard
+    command:
+      - bash
+      - -c
+      - |
+        until curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getwalletinfo"}' -H 'content-type: text/plain;' http://node1:18332 | grep -q '"error":null'; do
+          sleep 1
+        done
+        RESP=$(curl -s --user bitcoin:bitcoin --data-binary '{"jsonrpc":"1.0","id":"curltest","method":"getnewaddress"}' -H 'content-type: text/plain;' http://node1:18332)
+        ADDRESS=$(echo "$$RESP" | sed -n 's/.*"result":[[:space:]]*"\([^"]*\)".*/\1/p')
+        echo "Bitcoin address: $$ADDRESS"
+        RESPONSE=$(curl -s --user bitcoin:bitcoin --data-binary "{\"jsonrpc\":\"1.0\",\"id\":\"curltest\",\"method\":\"generatetoaddress\",\"params\":[100,\"$$ADDRESS\"]}" -H 'content-type: text/plain;' http://node1:18332)
+        echo "Mining complete"
+        sleep infinity
+    networks:
+      - regtest_network
+
+  #########################################################################
+  # SUI demo                                                              #
+  #########################################################################
+  sui-demo:
+    image: ghcr.io/nchain-innovation/bridge-demo-sui
+    container_name: sui-demo
+    depends_on:
+      - miner
+      - node1
+    working_dir: /app
+    # volumes:
+    #   - ~/a/tcpBridge/cli:/app/cli/
+    command:
+      - bash
+      - -c
+      - |
+        RUST_LOG=off sui start --with-faucet --force-regenesis >/dev/null 2>&1 &
+        sui-explorer-local start >/dev/null 2>&1 &
+        expect -c '
+          spawn sui client new-env --alias local --rpc http://localhost:9000 
+          expect "do you want to connect" 
+          send "y\r" 
+          expect "Environment alias" 
+          send "\r" 
+          expect "Select key scheme" 
+          send "0\r" 
+          expect eof 
+        '
+        sui client switch --env local
+        sui client active-address
+        sui client faucet --url http://localhost:9123/gas
+        sed -i 's/localhost/node1/g' ./cli/bsv_config.toml
+        sed -i 's/localhost/node1/g' ./cli/bsv/utils.py
+        sed -i 's/\["client", "faucet"\]/\["client", "faucet", "--url", "http:\/\/localhost:9123\/gas"\]/g' ./cli/sui_demo.py
+        sed -i 's/    run_cargo_build("sui")//g' ./cli/sui_demo.py
+        cd cli
+        python3 -m sui_demo setup --network regtest
+        python3 -m sui_demo pegin --user alice --pegin-amount 42000000000 --network regtest
+        python3 -m sui_demo transfer --sender alice --receiver bob --token-index 0 --network regtest
+        python3 -m sui_demo burn --user bob --token-index 0 --network regtest
+        python3 -m sui_demo pegout --user bob --token-index 0 --network regtest --update
+        echo "Demo complete"
+        sleep infinity
+    networks:
+      - regtest_network
+    ports:
+      - "9000:9000"   # RPC
+      - "9184:9184"   # Metrics
+      - "9123:9123"   # Faucet
+      - "9001:9001"   # Explorer

@@ -50,7 +50,7 @@ def read_info(key):
 
 def run_cargo_build(project_dir="."):
     process = subprocess.Popen(
-        ["cargo", "build"],
+        ["cargo", "build","--release"],
         cwd=project_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -110,7 +110,7 @@ def run_sui_command(command_args, working_dir=None):
         return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"Command failed with error {e.returncode}:")
-        print(e.stderr)
+        print(e)
         return None
 
 
